@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../../ui/Button';
 import { generateContent } from '../../../utils/ai';
 import { FaPlus, FaRobot, FaCheck } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 
 interface SkillsSectionProps {
   onUpdate: (data: { skills: string[] }) => void;
@@ -31,21 +32,33 @@ const extractSkills = (aiContent: string): string[] => {
 export const SkillsSection = ({ onUpdate, initialData }: SkillsSectionProps) => {
   const [skills, setSkills] = useState<string[]>(initialData?.skills || []);
   const [newSkill, setNewSkill] = useState('');
+  const [newSkillError, setNewSkillError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiGenerated, setAiGenerated] = useState<string[]>([]);
   const [domain, setDomain] = useState('');
+  const [domainError, setDomainError] = useState<string | null>(null);
   const [suggestedSkills, setSuggestedSkills] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleAddSkill = () => {
-    if (newSkill.trim() && !skills.includes(newSkill.trim())) {
-      const updatedSkills = [...skills, newSkill.trim()];
-      setSkills(updatedSkills);
-      onUpdate({ skills: updatedSkills });
-      setNewSkill('');
+    if (!newSkill.trim()) {
+      setNewSkillError('Skill name cannot be empty.');
+      toast.error('Skill name cannot be empty.');
+      return;
     }
+    if (skills.includes(newSkill.trim())) {
+      setNewSkillError('Skill already exists.');
+      toast.error('Skill already exists.');
+      return;
+    }
+    setNewSkillError(null);
+    const updatedSkills = [...skills, newSkill.trim()];
+    setSkills(updatedSkills);
+    onUpdate({ skills: updatedSkills });
+    setNewSkill('');
+    toast.success(`'${newSkill.trim()}' added to your skills.`);
   };
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -59,17 +72,21 @@ export const SkillsSection = ({ onUpdate, initialData }: SkillsSectionProps) => 
     const updatedSkills = skills.filter(skill => skill !== skillToRemove);
     setSkills(updatedSkills);
     onUpdate({ skills: updatedSkills });
+    toast.success(`'${skillToRemove}' removed from your skills.`);
   };
 
   const handleGenerateAI = async () => {
     setIsGenerating(true);
+    const aiToastId = toast.loading('Generating AI content...');
     try {
       const input = skills.join(', ');
       const generated = await generateContent('skills', input);
       const suggestedSkills = extractSkills(generated);
       setAiGenerated(suggestedSkills);
+      toast.success('AI content generated successfully!', { id: aiToastId });
     } catch (error) {
       console.error('Error generating content:', error);
+      toast.error('Failed to generate AI content.', { id: aiToastId });
     } finally {
       setIsGenerating(false);
     }
@@ -78,26 +95,37 @@ export const SkillsSection = ({ onUpdate, initialData }: SkillsSectionProps) => 
   const fetchSkills = async () => {
     setSuggestedSkills([]);
     setError('');
-    if (domain.trim()) {
-      setIsLoading(true);
-      try {
-        const aiResponse = await generateContent('skills', `${domain} related skills`);
-        const skills = extractSkills(aiResponse);
-        setSuggestedSkills(skills);
-        if (skills.length === 0) setError('No skills found for this domain. Try a different keyword.');
-      } catch (err) {
-        setSuggestedSkills([]);
-        setError('Failed to fetch skills. Please try again.');
-      } finally {
-        setIsLoading(false);
+    setDomainError(null);
+    if (!domain.trim()) {
+      setDomainError('Please enter a domain to get suggestions.');
+      toast.error('Please enter a domain to get suggestions.');
+      return;
+    }
+
+    setIsLoading(true);
+    const skillsToastId = toast.loading('Fetching AI skill suggestions...');
+    try {
+      const aiResponse = await generateContent('skills', `${domain} related skills`);
+      const skills = extractSkills(aiResponse);
+      setSuggestedSkills(skills);
+      if (skills.length === 0) {
+        setError('No skills found for this domain. Try a different keyword.');
+        toast.error('No skills found for this domain.', { id: skillsToastId });
+      } else {
+        toast.success('Skill suggestions loaded!', { id: skillsToastId });
       }
-    } else {
+    } catch (err) {
       setSuggestedSkills([]);
+      setError('Failed to fetch skills. Please try again.');
+      toast.error('Failed to fetch skills. Please try again.', { id: skillsToastId });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDomainInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDomain(e.target.value);
+    setDomainError(null);
   };
 
   const handleDomainKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -113,6 +141,18 @@ export const SkillsSection = ({ onUpdate, initialData }: SkillsSectionProps) => 
         ? prev.filter((s) => s !== skill)
         : [...prev, skill]
     );
+  };
+
+  const addSelectedSkillsToPortfolio = () => {
+    if (selectedSkills.length === 0) {
+      toast.error('No skills selected to add.');
+      return;
+    }
+    const updatedSkills = Array.from(new Set([...skills, ...selectedSkills]));
+    setSkills(updatedSkills);
+    onUpdate({ skills: updatedSkills });
+    setSelectedSkills([]);
+    toast.success(`${selectedSkills.length} selected skills added to your portfolio.`);
   };
 
   const removeSkill = (skill: string) => {
@@ -138,10 +178,15 @@ export const SkillsSection = ({ onUpdate, initialData }: SkillsSectionProps) => 
             <input
               type="text"
               value={newSkill}
-              onChange={(e) => setNewSkill(e.target.value)}
+              onChange={(e) => {
+                setNewSkill(e.target.value);
+                if (newSkillError) setNewSkillError(null);
+              }}
               onKeyPress={handleKeyPress}
               placeholder="Add a skill and press Enter"
-              className="w-full pl-10 pr-20 py-2 rounded-full border border-border bg-background text-foreground shadow-sm focus:border-blue-500 focus:ring-blue-500 transition"
+              className={`w-full pl-10 pr-20 py-2 rounded-full border shadow-sm focus:border-blue-500 focus:ring-blue-500 transition
+                ${newSkillError ? 'border-red-500 bg-red-550/10 text-red-700' : 'border-border bg-background text-foreground'}
+              `}
             />
             <Button
               onClick={handleAddSkill}
@@ -152,6 +197,7 @@ export const SkillsSection = ({ onUpdate, initialData }: SkillsSectionProps) => 
             </Button>
           </div>
         </div>
+        {newSkillError && <p className="text-red-500 text-sm mt-1">{newSkillError}</p>}
         {/* Current Skills */}
         <div className="flex flex-wrap gap-2">
           {skills.filter(skill => skill.trim() !== '').map((skill) => (
@@ -187,7 +233,9 @@ export const SkillsSection = ({ onUpdate, initialData }: SkillsSectionProps) => 
             onChange={handleDomainInput}
             onKeyDown={handleDomainKeyDown}
             placeholder="Type a tech or business domain..."
-            className="w-full rounded-full border border-border bg-background text-foreground shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+            className={`w-full rounded-full border shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2
+              ${domainError ? 'border-red-500 bg-red-550/10 text-red-700' : 'border-border bg-background text-foreground'}
+            `}
             disabled={isLoading}
           />
           <button
@@ -201,6 +249,7 @@ export const SkillsSection = ({ onUpdate, initialData }: SkillsSectionProps) => 
             ) : 'Get Suggestions'}
           </button>
         </div>
+        {domainError && <p className="text-red-500 text-sm mt-1">{domainError}</p>}
         <p className="text-xs text-foreground/60 mt-1">
           Type a tech or business domain like 'Frontend', 'Backend', 'AI', or 'Business' to get a list of relevant skills. Click on the skill chips to select them.
         </p>
@@ -219,7 +268,7 @@ export const SkillsSection = ({ onUpdate, initialData }: SkillsSectionProps) => 
               size="xs"
               variant="outline"
               className="ml-2 px-2 py-0.5 rounded-full border-blue-300 text-blue-700 hover:bg-blue-100"
-              onClick={() => setSelectedSkills(suggestedSkills)}
+              onClick={addSelectedSkillsToPortfolio}
             >
               Add All
             </Button>
@@ -248,9 +297,9 @@ export const SkillsSection = ({ onUpdate, initialData }: SkillsSectionProps) => 
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
-                    whileTap={{ scale: 0.95 }}
                   >
-                    {skill} {selected && <FaCheck className="ml-1" />}
+                    {skill}
+                    {selected && <FaCheck className="text-white ml-1" />}
                   </motion.button>
                 );
               })}
@@ -258,27 +307,24 @@ export const SkillsSection = ({ onUpdate, initialData }: SkillsSectionProps) => 
           </div>
         )}
       </motion.div>
-      {/* Selected Skills Preview */}
-      <div>
-        <h3 className="text-sm font-semibold mb-2 text-foreground">Your Selected Skills</h3>
-        {selectedSkills.length === 0 ? (
-          <p className="text-foreground/50 italic">No skills selected yet.</p>
-        ) : (
+      {/* Selected Skills */}
+      {selectedSkills.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-lg font-semibold text-foreground mb-2">Your Selected Skills</h3>
           <div className="flex flex-wrap gap-2">
             <AnimatePresence>
               {selectedSkills.map((skill) => (
                 <motion.span
                   key={skill}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 shadow-sm border border-blue-200"
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200 shadow-sm transition-all"
                 >
                   {skill}
-                  <FaCheck className="ml-1 text-blue-600" />
                   <button
                     onClick={() => removeSkill(skill)}
-                    className="ml-2 text-blue-600 hover:text-blue-800 focus:outline-none"
+                    className="ml-2 text-green-600 hover:text-green-800 focus:outline-none"
                     aria-label={`Remove ${skill}`}
                   >
                     ×
@@ -287,24 +333,18 @@ export const SkillsSection = ({ onUpdate, initialData }: SkillsSectionProps) => 
               ))}
             </AnimatePresence>
           </div>
-        )}
-        {selectedSkills.length > 0 && (
-          <div className="mt-2">
-            <Button
-              onClick={() => {
-                const updatedSkills = [...skills, ...selectedSkills.filter(s => !skills.includes(s))];
-                setSkills(updatedSkills);
-                onUpdate({ skills: updatedSkills });
-                setSelectedSkills([]);
-              }}
-              variant="secondary"
-              size="sm"
-              className="rounded-full mt-2"
-            >
-              Add Selected Skills
-            </Button>
-          </div>
-        )}
+          <Button
+            onClick={addSelectedSkillsToPortfolio}
+            className="mt-4 px-4 py-2 rounded-full bg-blue-600 text-white font-medium shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            Add Selected Skills
+          </Button>
+        </div>
+      )}
+      {/* Navigation Buttons */}
+      <div className="flex justify-between mt-8">
+        <Button variant="outline" onClick={() => { /* Navigate back */ }}>Back</Button>
+        <Button onClick={() => { /* Navigate next */ }}>Next</Button>
       </div>
     </motion.div>
   );
