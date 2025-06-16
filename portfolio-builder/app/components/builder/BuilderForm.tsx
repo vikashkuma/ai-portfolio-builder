@@ -2,16 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import Button from '../ui/Button';
 import { StepTracker } from './StepTracker';
 import { AboutSection } from './sections/AboutSection';
 import { ExperienceSection } from './sections/ExperienceSection';
 import { SkillsSection } from './sections/SkillsSection';
 import { PortfolioPreview } from './PortfolioPreview';
-import Button from '../ui/Button';
 import { EducationSection } from './sections/EducationSection';
 import { AwardsSection } from './sections/AwardsSection';
 import { TestimonialsSection } from './sections/TestimonialsSection';
 import { ContactSection } from './sections/ContactSection';
+import { downloadPortfolio } from '../../utils/portfolioExport';
+import { Portfolio, Education as PortfolioEducation } from '../../types/portfolio';
+import { toast } from 'react-hot-toast';
 
 const steps = [
   { id: 1, title: 'About', description: 'Basic information' },
@@ -23,18 +26,40 @@ const steps = [
   { id: 7, title: 'Contact', description: 'Contact information' },
 ];
 
+interface ComponentEducation {
+  id: string;
+  school: string;
+  degree: string;
+  field: string;
+  period: string;
+  description: string;
+  startDate?: Date | null;
+  endDate?: Date | null;
+  otherDegreeText?: string;
+  otherFieldText?: string;
+}
+
 export default function BuilderForm() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [portfolioData, setPortfolioData] = useState({
-    name: '',
-    role: '',
-    bio: '',
-    experience: [],
+  const [portfolioData, setPortfolioData] = useState<Portfolio>({
+    id: crypto.randomUUID(),
+    about: {
+      name: '',
+      role: '',
+      bio: '',
+    },
+    experiences: [],
     education: [],
     skills: [],
     awards: [],
     testimonials: [],
-    contact: {},
+    contact: {
+      email: '',
+    },
+    theme: 'light',
+    layout: 'single-page',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -49,10 +74,51 @@ export default function BuilderForm() {
   }, [modalOpen]);
 
   const handleUpdate = (sectionData: any) => {
-    setPortfolioData(prev => ({
-      ...prev,
-      ...sectionData,
-    }));
+    if (sectionData.education) {
+      // Convert component's Education type to Portfolio's Education type
+      const convertedEducation: PortfolioEducation[] = sectionData.education.map((edu: ComponentEducation) => ({
+        institution: edu.school,
+        degree: edu.degree === 'Other' ? edu.otherDegreeText || '' : edu.degree,
+        field: edu.field === 'Other' ? edu.otherFieldText || '' : edu.field,
+        startDate: edu.startDate?.toISOString() || '',
+        endDate: edu.endDate?.toISOString() || '',
+        description: edu.description || '',
+      }));
+      setPortfolioData(prev => ({
+        ...prev,
+        education: convertedEducation,
+      }));
+    } else if (sectionData.about) {
+      setPortfolioData(prev => ({
+        ...prev,
+        about: sectionData.about,
+      }));
+    } else if (sectionData.experiences) {
+      setPortfolioData(prev => ({
+        ...prev,
+        experiences: sectionData.experiences,
+      }));
+    } else if (sectionData.skills) {
+      setPortfolioData(prev => ({
+        ...prev,
+        skills: sectionData.skills,
+      }));
+    } else if (sectionData.awards) {
+      setPortfolioData(prev => ({
+        ...prev,
+        awards: sectionData.awards,
+      }));
+    } else if (sectionData.testimonials) {
+      setPortfolioData(prev => ({
+        ...prev,
+        testimonials: sectionData.testimonials,
+      }));
+    } else if (sectionData.contact) {
+      setPortfolioData(prev => ({
+        ...prev,
+        contact: sectionData.contact,
+      }));
+    }
   };
 
   const handleNext = () => {
@@ -68,71 +134,44 @@ export default function BuilderForm() {
   };
 
   const handleSave = () => {
-    const jsonString = JSON.stringify(portfolioData);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'portfolio.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    if (portfolioData) {
+      downloadPortfolio(portfolioData);
+      toast.success('Portfolio downloaded successfully!');
+    }
   };
 
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
-        return (
-          <AboutSection
-            onUpdate={handleUpdate}
-            initialData={portfolioData}
-          />
-        );
+        return <AboutSection onUpdate={handleUpdate} initialData={portfolioData} />;
       case 2:
-        return (
-          <ExperienceSection
-            onUpdate={handleUpdate}
-            initialData={portfolioData}
-          />
-        );
+        return <ExperienceSection onUpdate={handleUpdate} initialData={portfolioData} />;
       case 3:
-        return (
-          <EducationSection
-            onUpdate={handleUpdate}
-            initialData={portfolioData}
-          />
-        );
+        // Convert Portfolio's Education type to component's Education type
+        const componentEducation = portfolioData.education.map(edu => ({
+          id: crypto.randomUUID(),
+          institution: edu.institution,
+          degree: edu.degree,
+          field: edu.field,
+          description: edu.description,
+          school: edu.institution,
+          period: `${edu.startDate} - ${edu.endDate}`,
+          startDate: new Date(edu.startDate),
+          endDate: new Date(edu.endDate),
+          otherDegreeText: '',
+          otherFieldText: '',
+        }));
+        return <EducationSection onUpdate={handleUpdate} initialData={{ education: componentEducation }} />;
       case 4:
-        return (
-          <SkillsSection
-            onUpdate={handleUpdate}
-            initialData={portfolioData}
-          />
-        );
+        return <SkillsSection onUpdate={handleUpdate} initialData={portfolioData} />;
       case 5:
-        return (
-          <AwardsSection
-            onUpdate={handleUpdate}
-            initialData={portfolioData}
-          />
-        );
+        return <AwardsSection onUpdate={handleUpdate} initialData={portfolioData} />;
       case 6:
-        return (
-          <TestimonialsSection
-            onUpdate={handleUpdate}
-            initialData={portfolioData}
-          />
-        );
+        return <TestimonialsSection onUpdate={handleUpdate} initialData={portfolioData} />;
       case 7:
-        return (
-          <ContactSection
-            onUpdate={handleUpdate}
-            initialData={portfolioData}
-          />
-        );
+        return <ContactSection onUpdate={handleUpdate} initialData={portfolioData} />;
       default:
-        return <div>Section coming soon...</div>;
+        return null;
     }
   };
 

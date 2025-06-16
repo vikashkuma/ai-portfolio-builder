@@ -106,12 +106,12 @@ export const PortfolioPreview = ({ portfolioData, theme, device: deviceProp }: P
               </div>
               {portfolioData.skills && portfolioData.skills.length > 0 ? (
                 <div className="flex flex-wrap gap-2 ml-8">
-                  {portfolioData.skills.map((skill: string) => (
+                  {portfolioData.skills.map((skill: { name: string; level: string }) => (
                     <span
-                      key={skill}
+                      key={skill.name}
                       className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm"
                     >
-                      {skill}
+                      {skill.name}
                     </span>
                   ))}
                 </div>
@@ -131,9 +131,9 @@ export const PortfolioPreview = ({ portfolioData, theme, device: deviceProp }: P
                   <div key={edu.id} className="mb-4 ml-8">
                     {(edu.degree || edu.field) && (
                       <h3 className="font-medium">
-                        {edu.degree && edu.degree !== 'Other' ? edu.degree : ''}
-                        {edu.degree && edu.field && edu.degree !== 'Other' && edu.field !== 'Other' ? ' in ' : ''}
-                        {edu.field && edu.field !== 'Other' ? edu.field : ''}
+                        {edu.degree && edu.degree !== 'Other' ? edu.degree : edu.otherDegreeText || ''}
+                        {((edu.degree && edu.field && edu.degree !== 'Other' && edu.field !== 'Other') || (edu.degree === 'Other' && edu.otherDegreeText && edu.field === 'Other' && edu.otherFieldText) || (edu.degree === 'Other' && edu.otherDegreeText && edu.field !== 'Other') || (edu.degree !== 'Other' && edu.field === 'Other' && edu.otherFieldText)) ? ' in ' : ''}
+                        {edu.field && edu.field !== 'Other' ? edu.field : edu.otherFieldText || ''}
                       </h3>
                     )}
                     {edu.school && <p>{edu.school}</p>}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Button from '../../ui/Button';
 import { generateContent } from '../../../utils/ai';
@@ -17,36 +17,63 @@ export const AboutSection = ({ onUpdate, initialData }: AboutSectionProps) => {
     role: initialData?.role || '',
     bio: initialData?.bio || '',
   });
+
+  const [errors, setErrors] = useState<{ [key: string]: string | null }>({});
+  const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiGenerated, setAiGenerated] = useState('');
-  const [nameError, setNameError] = useState<string | null>(null);
-  const [roleError, setRoleError] = useState<string | null>(null);
-  const [bioError, setBioError] = useState<string | null>(null);
+
+  // Pure validation function
+  const validateAboutFormPure = useCallback((data: typeof formData) => {
+    const newErrors: { [key: string]: string | null } = {};
+
+    if (!data.name.trim()) {
+      newErrors.name = 'Full Name is required.';
+    } else if (data.name.length < 2) {
+      newErrors.name = 'Name must be at least 2 characters long.';
+    }
+
+    if (!data.role.trim()) {
+      newErrors.role = 'Professional Role is required.';
+    } else if (data.role.length < 3) {
+      newErrors.role = 'Role must be at least 3 characters long.';
+    }
+
+    if (!data.bio.trim()) {
+      newErrors.bio = 'Short Bio is required.';
+    } else if (data.bio.length < 50) {
+      newErrors.bio = 'Bio must be at least 50 characters long.';
+    } else if (data.bio.length > 500) {
+      newErrors.bio = 'Bio must not exceed 500 characters.';
+    }
+
+    return newErrors;
+  }, []);
+
+  // Effect to re-validate whenever form data changes
+  useEffect(() => {
+    const newErrors = validateAboutFormPure(formData);
+    setErrors(newErrors);
+  }, [formData, validateAboutFormPure]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    setTouched(prev => ({ ...prev, [name]: true }));
     onUpdate({ ...formData, [name]: value });
+  };
 
-    if (name === 'name') setNameError(null);
-    if (name === 'role') setRoleError(null);
-    if (name === 'bio') setBioError(null);
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
   };
 
   const handleGenerateAI = async () => {
-    if (!formData.name.trim()) {
-      setNameError('Full Name cannot be empty.');
-      toast.error('Full Name is required.');
-      return;
-    }
-    if (!formData.role.trim()) {
-      setRoleError('Professional Role cannot be empty.');
-      toast.error('Professional Role is required.');
-      return;
-    }
-    if (!formData.bio.trim()) {
-      setBioError('Short Bio cannot be empty.');
-      toast.error('Short Bio is required.');
+    const newErrors = validateAboutFormPure(formData);
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      Object.keys(formData).forEach(key => setTouched(prev => ({ ...prev, [key]: true })));
+      toast.error('Please fix the errors before generating AI content.');
       return;
     }
 
@@ -64,6 +91,8 @@ export const AboutSection = ({ onUpdate, initialData }: AboutSectionProps) => {
       setIsGenerating(false);
     }
   };
+
+  const hasErrors = Object.values(errors).some(error => error !== null);
 
   const extractMeaningfulContent = (aiContent: string) => {
     let content = aiContent.replace(/<think>[\s\S]*?<\/think>/g, '');
@@ -86,11 +115,12 @@ export const AboutSection = ({ onUpdate, initialData }: AboutSectionProps) => {
           id="name"
           value={formData.name}
           onChange={handleInputChange}
+          onBlur={handleBlur}
           className={`mt-1 block w-full rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500
-            ${nameError ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
+            ${touched.name && errors.name ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
           `}
         />
-        {nameError && <p className="text-red-500 text-sm mt-1">{nameError}</p>}
+        {touched.name && errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
       </div>
 
       <div>
@@ -103,16 +133,20 @@ export const AboutSection = ({ onUpdate, initialData }: AboutSectionProps) => {
           id="role"
           value={formData.role}
           onChange={handleInputChange}
+          onBlur={handleBlur}
           className={`mt-1 block w-full rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500
-            ${roleError ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
+            ${touched.role && errors.role ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
           `}
         />
-        {roleError && <p className="text-red-500 text-sm mt-1">{roleError}</p>}
+        {touched.role && errors.role && <p className="text-red-500 text-sm mt-1">{errors.role}</p>}
       </div>
 
       <div>
         <label htmlFor="bio" className="block text-sm font-medium text-foreground">
           Short Bio
+          <span className="text-sm text-foreground/60 ml-2">
+            ({formData.bio.length}/500 characters)
+          </span>
         </label>
         <textarea
           name="bio"
@@ -120,11 +154,13 @@ export const AboutSection = ({ onUpdate, initialData }: AboutSectionProps) => {
           rows={4}
           value={formData.bio}
           onChange={handleInputChange}
+          onBlur={handleBlur}
+          maxLength={500}
           className={`mt-1 block w-full rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500
-            ${bioError ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
+            ${touched.bio && errors.bio ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
           `}
         />
-        {bioError && <p className="text-red-500 text-sm mt-1">{bioError}</p>}
+        {touched.bio && errors.bio && <p className="text-red-500 text-sm mt-1">{errors.bio}</p>}
       </div>
 
       <div className="flex justify-end">

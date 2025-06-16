@@ -1,192 +1,257 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Button from '../../ui/Button';
 import { generateContent } from '../../../utils/ai';
-
-interface Award {
-  id: string;
-  title: string;
-  issuer: string;
-  year: string;
-  description: string;
-}
+import toast from 'react-hot-toast';
+import { FaPlus, FaTrash, FaRobot } from 'react-icons/fa';
 
 interface AwardsSectionProps {
-  onUpdate: (data: { awards: Award[] }) => void;
-  initialData?: { awards: Award[] };
+  onUpdate: (data: any) => void;
+  initialData?: any;
 }
 
 export const AwardsSection = ({ onUpdate, initialData }: AwardsSectionProps) => {
-  const [awards, setAwards] = useState<Award[]>(initialData?.awards || []);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [aiGenerated, setAiGenerated] = useState('');
+  const [awards, setAwards] = useState<Array<{
+    name: string;
+    date: string;
+    description: string;
+  }>>(initialData?.awards || [{ name: '', date: '', description: '' }]);
 
-  // Ensure at least one award form is open by default
-  useEffect(() => {
-    if (awards.length === 0) {
-      const newAward: Award = {
-        id: Date.now().toString(),
-        title: '',
-        issuer: '',
-        year: '',
-        description: '',
-      };
-      setAwards([newAward]);
-      onUpdate({ awards: [newAward] });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const [errors, setErrors] = useState<{ [key: string]: string | null }>({});
+  const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [suggestedAwards, setSuggestedAwards] = useState<string[]>([]);
+
+  // Pure validation function
+  const validateAwardsPure = useCallback((awardsList: typeof awards) => {
+    const newErrors: { [key: string]: string | null } = {};
+
+    awardsList.forEach((award, index) => {
+      if (!award.name.trim()) {
+        newErrors[`award-${index}-name`] = 'Award name is required.';
+      } else if (award.name.length < 3) {
+        newErrors[`award-${index}-name`] = 'Award name must be at least 3 characters long.';
+      } else if (award.name.length > 100) {
+        newErrors[`award-${index}-name`] = 'Award name must not exceed 100 characters.';
+      }
+
+      if (!award.date.trim()) {
+        newErrors[`award-${index}-date`] = 'Date is required.';
+      } else {
+        const dateRegex = /^\d{4}(-\d{2})?$/;
+        if (!dateRegex.test(award.date)) {
+          newErrors[`award-${index}-date`] = 'Date must be in YYYY or YYYY-MM format.';
+        }
+      }
+
+      if (!award.description.trim()) {
+        newErrors[`award-${index}-description`] = 'Description is required.';
+      } else if (award.description.length < 10) {
+        newErrors[`award-${index}-description`] = 'Description must be at least 10 characters long.';
+      } else if (award.description.length > 500) {
+        newErrors[`award-${index}-description`] = 'Description must not exceed 500 characters.';
+      }
+    });
+
+    return newErrors;
   }, []);
 
+  // Effect to re-validate whenever awards change
+  useEffect(() => {
+    const newErrors = validateAwardsPure(awards);
+    setErrors(newErrors);
+  }, [awards, validateAwardsPure]);
+
+  const handleAwardChange = (index: number, field: 'name' | 'date' | 'description', value: string) => {
+    const newAwards = [...awards];
+    newAwards[index] = { ...newAwards[index], [field]: value };
+    setAwards(newAwards);
+    setTouched(prev => ({ ...prev, [`award-${index}-${field}`]: true }));
+    onUpdate({ awards: newAwards });
+  };
+
   const handleAddAward = () => {
-    const newAward: Award = {
-      id: Date.now().toString(),
-      title: '',
-      issuer: '',
-      year: '',
-      description: '',
-    };
-    setAwards([...awards, newAward]);
-    onUpdate({ awards: [...awards, newAward] });
+    const newAwards = [...awards, { name: '', date: '', description: '' }];
+    setAwards(newAwards);
+    onUpdate({ awards: newAwards });
   };
 
-  const handleUpdateAward = (id: string, field: keyof Award, value: string) => {
-    const updatedAwards = awards.map(award =>
-      award.id === id ? { ...award, [field]: value } : award
-    );
-    setAwards(updatedAwards);
-    onUpdate({ awards: updatedAwards });
-  };
+  const handleRemoveAward = (index: number) => {
+    const newAwards = awards.filter((_, i) => i !== index);
+    setAwards(newAwards);
+    onUpdate({ awards: newAwards });
 
-  const handleRemoveAward = (id: string) => {
-    const updatedAwards = awards.filter(award => award.id !== id);
-    setAwards(updatedAwards);
-    onUpdate({ awards: updatedAwards });
-  };
-
-  const handleGenerateAI = async (id: string) => {
-    setIsGenerating(true);
-    try {
-      const award = awards.find(award => award.id === id);
-      if (award) {
-        const input = `Title: ${award.title}\nIssuer: ${award.issuer}\nYear: ${award.year}\nDescription: ${award.description}`;
-        const generated = await generateContent('awards', input);
-        setAiGenerated(generated);
+    const newTouched = { ...touched };
+    Object.keys(newTouched).forEach(key => {
+      if (key.startsWith(`award-${index}-`)) {
+        delete newTouched[key];
       }
+    });
+    setTouched(newTouched);
+  };
+
+  const handleGenerateAI = async () => {
+    const newErrors = validateAwardsPure(awards);
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      awards.forEach((_, index) => {
+        setTouched(prev => ({
+          ...prev,
+          [`award-${index}-name`]: true,
+          [`award-${index}-date`]: true,
+          [`award-${index}-description`]: true,
+        }));
+      });
+      toast.error('Please fix the errors before generating AI content.');
+      return;
+    }
+
+    setIsGenerating(true);
+    const toastId = toast.loading('Generating AI content...');
+    try {
+      const input = `Current awards: ${awards.map(a => a.name).join(', ')}`;
+      const generated = await generateContent('awards', input);
+      const awardsList = generated.split('\n').map(a => a.trim()).filter(a => a);
+      setSuggestedAwards(awardsList);
+      toast.success('AI content generated successfully!', { id: toastId });
     } catch (error) {
       console.error('Error generating content:', error);
+      toast.error('Failed to generate AI content. Please try again.', { id: toastId });
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  const extractMeaningfulContent = (aiContent: string) => {
-    // Remove <think>...</think> blocks
-    let content = aiContent.replace(/<think>[\s\S]*?<\/think>/g, '');
-    return content.trim();
   };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
+      className="space-y-6 bg-background text-foreground border border-border rounded-xl p-6"
     >
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Awards & Recognitions</h2>
-        <Button onClick={handleAddAward}>Add Award</Button>
+      <div className="space-y-4">
+        {awards.map((award, index) => (
+          <div key={index} className="space-y-4 p-4 border border-border rounded-lg">
+            <div>
+              <label htmlFor={`award-${index}-name`} className="block text-sm font-medium text-foreground">
+                Award Name
+              </label>
+              <input
+                type="text"
+                id={`award-${index}-name`}
+                value={award.name}
+                onChange={(e) => handleAwardChange(index, 'name', e.target.value)}
+                onBlur={() => setTouched(prev => ({ ...prev, [`award-${index}-name`]: true }))}
+                className={`mt-1 block w-full rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500
+                  ${touched[`award-${index}-name`] && errors[`award-${index}-name`] ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
+                `}
+              />
+              {touched[`award-${index}-name`] && errors[`award-${index}-name`] && (
+                <p className="text-red-500 text-sm mt-1">{errors[`award-${index}-name`]}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor={`award-${index}-date`} className="block text-sm font-medium text-foreground">
+                Date (YYYY or YYYY-MM)
+              </label>
+              <input
+                type="text"
+                id={`award-${index}-date`}
+                value={award.date}
+                onChange={(e) => handleAwardChange(index, 'date', e.target.value)}
+                onBlur={() => setTouched(prev => ({ ...prev, [`award-${index}-date`]: true }))}
+                placeholder="2023 or 2023-06"
+                className={`mt-1 block w-full rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500
+                  ${touched[`award-${index}-date`] && errors[`award-${index}-date`] ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
+                `}
+              />
+              {touched[`award-${index}-date`] && errors[`award-${index}-date`] && (
+                <p className="text-red-500 text-sm mt-1">{errors[`award-${index}-date`]}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor={`award-${index}-description`} className="block text-sm font-medium text-foreground">
+                Description
+                <span className="text-sm text-foreground/60 ml-2">
+                  ({award.description.length}/500 characters)
+                </span>
+              </label>
+              <textarea
+                id={`award-${index}-description`}
+                value={award.description}
+                onChange={(e) => handleAwardChange(index, 'description', e.target.value)}
+                onBlur={() => setTouched(prev => ({ ...prev, [`award-${index}-description`]: true }))}
+                rows={3}
+                maxLength={500}
+                className={`mt-1 block w-full rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500
+                  ${touched[`award-${index}-description`] && errors[`award-${index}-description`] ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
+                `}
+              />
+              {touched[`award-${index}-description`] && errors[`award-${index}-description`] && (
+                <p className="text-red-500 text-sm mt-1">{errors[`award-${index}-description`]}</p>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => handleRemoveAward(index)}
+                disabled={awards.length === 1}
+              >
+                <FaTrash className="h-4 w-4 mr-2" />
+                Remove Award
+              </Button>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {awards.map((award) => (
-        <div
-          key={award.id}
-          className="p-4 border border-gray-200 rounded-lg space-y-4"
+      <div className="flex justify-between">
+        <Button
+          onClick={handleAddAward}
+          variant="outline"
+          size="sm"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground">Title</label>
-              <input
-                type="text"
-                value={award.title}
-                onChange={(e) => handleUpdateAward(award.id, 'title', e.target.value)}
-                className="mt-1 block w-full rounded-md border border-border bg-background text-foreground shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground">Issuer</label>
-              <input
-                type="text"
-                value={award.issuer}
-                onChange={(e) => handleUpdateAward(award.id, 'issuer', e.target.value)}
-                className="mt-1 block w-full rounded-md border border-border bg-background text-foreground shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground">Year</label>
-            <input
-              type="text"
-              value={award.year}
-              onChange={(e) => handleUpdateAward(award.id, 'year', e.target.value)}
-              className="mt-1 block w-full rounded-md border border-border bg-background text-foreground shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground">Description</label>
-            <textarea
-              value={award.description}
-              onChange={(e) => handleUpdateAward(award.id, 'description', e.target.value)}
-              rows={3}
-              className="mt-1 block w-full rounded-md border border-border bg-background text-foreground shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-          <div className="flex justify-between">
-            <Button
-              onClick={() => handleGenerateAI(award.id)}
-              disabled={isGenerating}
-              variant="outline"
-            >
-              {isGenerating ? 'Generating...' : 'Generate with AI'}
-            </Button>
-            <Button
-              onClick={() => handleRemoveAward(award.id)}
-              variant="danger"
-            >
-              Remove
-            </Button>
-          </div>
-          {aiGenerated && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="mt-4 p-4 bg-background text-foreground rounded-lg border border-border"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="text-sm font-medium text-foreground">AI Generated Description</h4>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => navigator.clipboard.writeText(extractMeaningfulContent(aiGenerated))}
-                >
-                  Copy
-                </Button>
-              </div>
-              <pre className="whitespace-pre-wrap text-foreground/80 mb-2">{extractMeaningfulContent(aiGenerated)}</pre>
-              <Button
+          <FaPlus className="h-4 w-4 mr-2" />
+          Add Award
+        </Button>
+        <Button
+          onClick={handleGenerateAI}
+          disabled={isGenerating}
+        >
+          <FaRobot className="h-4 w-4 mr-2" />
+          {isGenerating ? 'Generating...' : 'Suggest with AI'}
+        </Button>
+      </div>
+
+      {suggestedAwards.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="mt-4 p-4 bg-background text-foreground rounded-lg border border-border"
+        >
+          <h4 className="text-sm font-medium text-foreground mb-2">AI Suggested Awards</h4>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {suggestedAwards.map((award, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors"
                 onClick={() => {
-                  // Save to section logic
-                  setAiGenerated('');
+                  handleAddAward();
+                  handleAwardChange(awards.length, 'name', award);
+                  toast.success(`Added \'${award}\' from suggestions!`);
                 }}
-                variant="secondary"
-                size="sm"
               >
-                Save to Section
-              </Button>
-            </motion.div>
-          )}
-        </div>
-      ))}
+                {award} <FaPlus className="ml-2 h-3 w-3" />
+              </span>
+            ))}
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   );
 }; 

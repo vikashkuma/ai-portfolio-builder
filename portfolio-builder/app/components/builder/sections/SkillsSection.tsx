@@ -1,351 +1,245 @@
 'use client';
 
-import { useState, KeyboardEvent, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useCallback, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import Button from '../../ui/Button';
 import { generateContent } from '../../../utils/ai';
-import { FaPlus, FaRobot, FaCheck } from 'react-icons/fa';
 import toast from 'react-hot-toast';
+import { FaPlus, FaTrash, FaRobot, FaCheck } from 'react-icons/fa';
 
 interface SkillsSectionProps {
-  onUpdate: (data: { skills: string[] }) => void;
-  initialData?: { skills: string[] };
+  onUpdate: (data: any) => void;
+  initialData?: any;
 }
 
-// Extraction logic for skills
-const extractSkills = (aiContent: string): string[] => {
-  let content = aiContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-  content = content.replace(/^#+.*$/gm, '');
-  content = content.replace(/^[\-*\s]*([A-Za-z\s]+:)[\s]*$/gm, '');
-  const lines = content
-    .split(/\n|,/)
-    .map(line => line.replace(/^[-*\s]+/, '').trim())
-    .filter(line =>
-      line &&
-      !line.match(/^#+/) &&
-      !line.match(/:$/) &&
-      line.toLowerCase() !== 'skills'
-    );
-  return Array.from(new Set(lines));
-};
-
 export const SkillsSection = ({ onUpdate, initialData }: SkillsSectionProps) => {
-  const [skills, setSkills] = useState<string[]>(initialData?.skills || []);
-  const [newSkill, setNewSkill] = useState('');
-  const [newSkillError, setNewSkillError] = useState<string | null>(null);
+  const [skills, setSkills] = useState<Array<{ name: string; level: string }>>(
+    initialData?.skills || [{ name: '', level: 'Beginner' }]
+  );
+  const [errors, setErrors] = useState<{ [key: string]: string | null }>({});
+  const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
   const [isGenerating, setIsGenerating] = useState(false);
-  const [aiGenerated, setAiGenerated] = useState<string[]>([]);
-  const [domain, setDomain] = useState('');
-  const [domainError, setDomainError] = useState<string | null>(null);
   const [suggestedSkills, setSuggestedSkills] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+
+  // Pure validation function
+  const validateSkillsPure = useCallback((skillsList: typeof skills) => {
+    const newErrors: { [key: string]: string | null } = {};
+
+    skillsList.forEach((skill, index) => {
+      if (!skill.name.trim()) {
+        newErrors[`skill-${index}`] = 'Skill name is required.';
+      } else if (skill.name.length < 2) {
+        newErrors[`skill-${index}`] = 'Skill name must be at least 2 characters long.';
+      } else if (skill.name.length > 50) {
+        newErrors[`skill-${index}`] = 'Skill name must not exceed 50 characters.';
+      }
+    });
+
+    return newErrors;
+  }, []);
+
+  // Effect to re-validate whenever skills change
+  useEffect(() => {
+    const newErrors = validateSkillsPure(skills);
+    setErrors(newErrors);
+  }, [skills, validateSkillsPure]);
+
+  const handleSkillChange = (index: number, field: 'name' | 'level', value: string) => {
+    const newSkills = [...skills];
+    newSkills[index] = { ...newSkills[index], [field]: value };
+    setSkills(newSkills);
+    setTouched(prev => ({ ...prev, [`skill-${index}`]: true }));
+    onUpdate({ skills: newSkills });
+  };
 
   const handleAddSkill = () => {
-    if (!newSkill.trim()) {
-      setNewSkillError('Skill name cannot be empty.');
-      toast.error('Skill name cannot be empty.');
-      return;
-    }
-    if (skills.includes(newSkill.trim())) {
-      setNewSkillError('Skill already exists.');
-      toast.error('Skill already exists.');
-      return;
-    }
-    setNewSkillError(null);
-    const updatedSkills = [...skills, newSkill.trim()];
-    setSkills(updatedSkills);
-    onUpdate({ skills: updatedSkills });
-    setNewSkill('');
-    toast.success(`'${newSkill.trim()}' added to your skills.`);
+    const newSkills = [...skills, { name: '', level: 'Beginner' }];
+    setSkills(newSkills);
+    onUpdate({ skills: newSkills });
   };
 
-  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddSkill();
-    }
-  };
+  const handleRemoveSkill = (index: number) => {
+    const newSkills = skills.filter((_, i) => i !== index);
+    setSkills(newSkills);
+    onUpdate({ skills: newSkills });
 
-  const handleRemoveSkill = (skillToRemove: string) => {
-    const updatedSkills = skills.filter(skill => skill !== skillToRemove);
-    setSkills(updatedSkills);
-    onUpdate({ skills: updatedSkills });
-    toast.success(`'${skillToRemove}' removed from your skills.`);
+    const newTouched = { ...touched };
+    delete newTouched[`skill-${index}`];
+    setTouched(newTouched);
   };
 
   const handleGenerateAI = async () => {
+    const newErrors = validateSkillsPure(skills);
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      skills.forEach((_, index) => setTouched(prev => ({ ...prev, [`skill-${index}`]: true })));
+      toast.error('Please fix the errors before generating AI content.');
+      return;
+    }
+
     setIsGenerating(true);
-    const aiToastId = toast.loading('Generating AI content...');
+    const toastId = toast.loading('Generating AI content...');
     try {
-      const input = skills.join(', ');
+      const input = `Current skills: ${skills.map(s => s.name).join(', ')}`;
       const generated = await generateContent('skills', input);
-      const suggestedSkills = extractSkills(generated);
-      setAiGenerated(suggestedSkills);
-      toast.success('AI content generated successfully!', { id: aiToastId });
+      const skillsList = generated.split(',').map(s => s.trim());
+      setSuggestedSkills(skillsList);
+      toast.success('AI content generated successfully!', { id: toastId });
     } catch (error) {
       console.error('Error generating content:', error);
-      toast.error('Failed to generate AI content.', { id: aiToastId });
+      toast.error('Failed to generate AI content. Please try again.', { id: toastId });
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const fetchSkills = async () => {
-    setSuggestedSkills([]);
-    setError('');
-    setDomainError(null);
-    if (!domain.trim()) {
-      setDomainError('Please enter a domain to get suggestions.');
-      toast.error('Please enter a domain to get suggestions.');
+  const handleAddSelectedSkills = () => {
+    if (selectedSkills.length === 0) {
+      toast.error('Please select at least one skill to add.');
       return;
     }
 
-    setIsLoading(true);
-    const skillsToastId = toast.loading('Fetching AI skill suggestions...');
-    try {
-      const aiResponse = await generateContent('skills', `${domain} related skills`);
-      const skills = extractSkills(aiResponse);
-      setSuggestedSkills(skills);
-      if (skills.length === 0) {
-        setError('No skills found for this domain. Try a different keyword.');
-        toast.error('No skills found for this domain.', { id: skillsToastId });
-      } else {
-        toast.success('Skill suggestions loaded!', { id: skillsToastId });
-      }
-    } catch (err) {
-      setSuggestedSkills([]);
-      setError('Failed to fetch skills. Please try again.');
-      toast.error('Failed to fetch skills. Please try again.', { id: skillsToastId });
-    } finally {
-      setIsLoading(false);
-    }
+    const newSkills = [
+      ...skills,
+      ...selectedSkills.map(skill => ({ name: skill, level: 'Beginner' }))
+    ];
+    setSkills(newSkills);
+    onUpdate({ skills: newSkills });
+    setSelectedSkills([]);
+    setSuggestedSkills([]);
+    toast.success('Selected skills added successfully!');
   };
 
-  const handleDomainInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setDomain(e.target.value);
-    setDomainError(null);
-  };
-
-  const handleDomainKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      fetchSkills();
-    }
-  };
-
-  const toggleSkill = (skill: string) => {
-    setSelectedSkills((prev) =>
+  const handleSelectSkill = (skill: string) => {
+    setSelectedSkills(prev =>
       prev.includes(skill)
-        ? prev.filter((s) => s !== skill)
+        ? prev.filter(s => s !== skill)
         : [...prev, skill]
     );
   };
 
-  const addSelectedSkillsToPortfolio = () => {
-    if (selectedSkills.length === 0) {
-      toast.error('No skills selected to add.');
-      return;
-    }
-    const updatedSkills = Array.from(new Set([...skills, ...selectedSkills]));
-    setSkills(updatedSkills);
-    onUpdate({ skills: updatedSkills });
-    setSelectedSkills([]);
-    toast.success(`${selectedSkills.length} selected skills added to your portfolio.`);
+  const handleBlur = (index: number, field: 'name' | 'level') => {
+    setTouched(prev => ({ ...prev, [`skill-${index}`]: true }));
   };
 
-  const removeSkill = (skill: string) => {
-    setSelectedSkills((prev) => prev.filter((s) => s !== skill));
-  };
+  const hasErrors = Object.values(errors).some(error => error !== null);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-background rounded-2xl shadow-lg p-8 max-w-2xl mx-auto space-y-8 border border-border"
+      className="space-y-6 bg-background text-foreground border border-border rounded-xl p-6"
     >
-      <div className="flex items-center gap-3 mb-2">
-        <h2 className="text-3xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
-          <span>Skills</span>
-        </h2>
-      </div>
-      {/* Skill Input */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2 w-full">
-          <div className="relative flex-1">
-            <FaPlus className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400" />
-            <input
-              type="text"
-              value={newSkill}
-              onChange={(e) => {
-                setNewSkill(e.target.value);
-                if (newSkillError) setNewSkillError(null);
-              }}
-              onKeyPress={handleKeyPress}
-              placeholder="Add a skill and press Enter"
-              className={`w-full pl-10 pr-20 py-2 rounded-full border shadow-sm focus:border-blue-500 focus:ring-blue-500 transition
-                ${newSkillError ? 'border-red-500 bg-red-550/10 text-red-700' : 'border-border bg-background text-foreground'}
-              `}
-            />
-            <Button
-              onClick={handleAddSkill}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1 rounded-full bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ minWidth: 60 }}
+      <div className="space-y-4">
+        {skills.map((skill, index) => (
+          <div key={index} className="flex gap-4 items-start">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={skill.name}
+                onChange={(e) => handleSkillChange(index, 'name', e.target.value)}
+                onBlur={() => handleBlur(index, 'name')}
+                placeholder="Skill name"
+                className={`w-full rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500
+                  ${touched[`skill-${index}`] && errors[`skill-${index}`] ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
+                `}
+              />
+              {touched[`skill-${index}`] && errors[`skill-${index}`] && (
+                <p className="text-red-500 text-sm mt-1">{errors[`skill-${index}`]}</p>
+              )}
+            </div>
+            <select
+              value={skill.level}
+              onChange={(e) => handleSkillChange(index, 'level', e.target.value)}
+              onBlur={() => handleBlur(index, 'level')}
+              className="rounded-md border border-border bg-background text-foreground shadow-sm focus:border-blue-500 focus:ring-blue-500"
             >
-              Add
+              <option value="Beginner">Beginner</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Advanced">Advanced</option>
+              <option value="Expert">Expert</option>
+            </select>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => handleRemoveSkill(index)}
+              disabled={skills.length === 1}
+            >
+              <FaTrash className="h-4 w-4" />
             </Button>
           </div>
-        </div>
-        {newSkillError && <p className="text-red-500 text-sm mt-1">{newSkillError}</p>}
-        {/* Current Skills */}
-        <div className="flex flex-wrap gap-2">
-          {skills.filter(skill => skill.trim() !== '').map((skill) => (
-            <motion.span
-              key={skill}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200 shadow-sm transition-all"
-            >
-              {skill}
-              <button
-                onClick={() => handleRemoveSkill(skill)}
-                className="ml-2 text-blue-600 hover:text-blue-800 focus:outline-none"
-                aria-label={`Remove ${skill}`}
-              >
-                ×
-              </button>
-            </motion.span>
-          ))}
-        </div>
+        ))}
       </div>
-      {/* Domain Input */}
-      <div>
-        <label htmlFor="domain" className="block text-sm font-medium text-foreground mb-1">
-          Enter your technology domain (e.g., Frontend, Backend, DevOps, AI, Data Science, Business)
-        </label>
-        <div className="flex gap-2 items-end">
-          <input
-            id="domain"
-            type="text"
-            value={domain}
-            onChange={handleDomainInput}
-            onKeyDown={handleDomainKeyDown}
-            placeholder="Type a tech or business domain..."
-            className={`w-full rounded-full border shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2
-              ${domainError ? 'border-red-500 bg-red-550/10 text-red-700' : 'border-border bg-background text-foreground'}
-            `}
-            disabled={isLoading}
-          />
-          <button
-            type="button"
-            onClick={fetchSkills}
-            disabled={isLoading || !domain.trim()}
-            className="px-4 py-2 rounded-full bg-blue-600 text-white font-medium shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
-          >
-            {isLoading ? (
-              <span className="flex items-center gap-1"><FaRobot className="animate-spin" /> Loading...</span>
-            ) : 'Get Suggestions'}
-          </button>
-        </div>
-        {domainError && <p className="text-red-500 text-sm mt-1">{domainError}</p>}
-        <p className="text-xs text-foreground/60 mt-1">
-          Type a tech or business domain like 'Frontend', 'Backend', 'AI', or 'Business' to get a list of relevant skills. Click on the skill chips to select them.
-        </p>
+
+      <div className="flex justify-between">
+        <Button
+          onClick={handleAddSkill}
+          variant="outline"
+          size="sm"
+        >
+          <FaPlus className="h-4 w-4 mr-2" />
+          Add Skill
+        </Button>
+        <Button
+          onClick={handleGenerateAI}
+          disabled={isGenerating}
+        >
+          <FaRobot className="h-4 w-4 mr-2" />
+          {isGenerating ? 'Generating...' : 'Generate with AI'}
+        </Button>
       </div>
-      {/* AI-Powered Suggestions */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mt-2"
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <FaRobot className="text-blue-500" />
-          <span className="text-sm font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">AI Suggestions</span>
-          {suggestedSkills.length > 0 && (
+
+      {suggestedSkills.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="mt-4 p-4 bg-background text-foreground rounded-lg border border-border"
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="text-sm font-medium text-foreground">Suggested Skills</h4>
             <Button
-              size="xs"
+              size="sm"
               variant="outline"
-              className="ml-2 px-2 py-0.5 rounded-full border-blue-300 text-blue-700 hover:bg-blue-100"
-              onClick={addSelectedSkillsToPortfolio}
+              onClick={() => {
+                navigator.clipboard.writeText(suggestedSkills.join(', '));
+                toast.success('Suggested skills copied to clipboard!');
+              }}
             >
-              Add All
+              Copy All
             </Button>
-          )}
-        </div>
-        {isLoading ? (
-          <div className="flex items-center gap-2 text-blue-500"><FaRobot className="animate-spin" /> Loading skills...</div>
-        ) : error ? (
-          <p className="text-red-500 text-sm italic">{error}</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            <AnimatePresence>
-              {suggestedSkills.map((skill) => {
-                const selected = selectedSkills.includes(skill);
-                return (
-                  <motion.button
-                    key={skill}
-                    type="button"
-                    onClick={() => toggleSkill(skill)}
-                    className={`px-4 py-1.5 rounded-full shadow-sm border transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium flex items-center gap-1
-                      ${selected
-                        ? 'bg-blue-600 text-white border-blue-700 scale-105'
-                        : 'bg-background text-foreground border-border hover:bg-blue-50'}
-                    `}
-                    aria-pressed={selected}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                  >
-                    {skill}
-                    {selected && <FaCheck className="text-white ml-1" />}
-                  </motion.button>
-                );
-              })}
-            </AnimatePresence>
           </div>
-        )}
-      </motion.div>
-      {/* Selected Skills */}
-      {selectedSkills.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-lg font-semibold text-foreground mb-2">Your Selected Skills</h3>
           <div className="flex flex-wrap gap-2">
-            <AnimatePresence>
-              {selectedSkills.map((skill) => (
-                <motion.span
-                  key={skill}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200 shadow-sm transition-all"
-                >
-                  {skill}
-                  <button
-                    onClick={() => removeSkill(skill)}
-                    className="ml-2 text-green-600 hover:text-green-800 focus:outline-none"
-                    aria-label={`Remove ${skill}`}
-                  >
-                    ×
-                  </button>
-                </motion.span>
-              ))}
-            </AnimatePresence>
+            {suggestedSkills.map((skill, index) => (
+              <button
+                key={index}
+                onClick={() => handleSelectSkill(skill)}
+                className={`px-3 py-1 rounded-full text-sm transition-colors
+                  ${selectedSkills.includes(skill)
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-background text-foreground border border-border hover:bg-foreground/5'
+                  }
+                `}
+              >
+                {skill}
+                {selectedSkills.includes(skill) && (
+                  <FaCheck className="inline-block ml-2 h-3 w-3" />
+                )}
+              </button>
+            ))}
           </div>
-          <Button
-            onClick={addSelectedSkillsToPortfolio}
-            className="mt-4 px-4 py-2 rounded-full bg-blue-600 text-white font-medium shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          >
-            Add Selected Skills
-          </Button>
-        </div>
+          <div className="mt-4 flex justify-end">
+            <Button
+              onClick={handleAddSelectedSkills}
+              disabled={selectedSkills.length === 0}
+              variant="secondary"
+              size="sm"
+            >
+              Add Selected Skills
+            </Button>
+          </div>
+        </motion.div>
       )}
-      {/* Navigation Buttons */}
-      <div className="flex justify-between mt-8">
-        <Button variant="outline" onClick={() => { /* Navigate back */ }}>Back</Button>
-        <Button onClick={() => { /* Navigate next */ }}>Next</Button>
-      </div>
     </motion.div>
   );
 }; 
