@@ -13,6 +13,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
+<<<<<<< HEAD
     <html lang="en" suppressHydrationWarning>
       <head>
         <script
@@ -31,6 +32,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
+=======
+    <html lang="en">
+>>>>>>> 3757bbd (Implement UI/UX improvements, add contact & features pages, and enhance AI suggestions.)
       <body className={inter.className}>
         <ThemeProvider>
           {/* Header */}
@@ -43,11 +47,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </header>
           {/* Main Content */}
+<<<<<<< HEAD
           <main className="flex-1 flex flex-col items-center justify-start w-full px-4 py-8">
             {children}
           </main>
           {/* Footer */}
           <footer className="w-full text-center text-xs text-foreground py-4 border-t border-border mt-8">
+=======
+          <main className="flex-1 flex flex-col items-center justify-start w-full px-4 py-8 bg-background text-foreground">
+            {children}
+          </main>
+          {/* Footer */}
+          <footer className="w-full text-center text-xs text-foreground py-4 border-t border-border bg-background mt-8">
+>>>>>>> 3757bbd (Implement UI/UX improvements, add contact & features pages, and enhance AI suggestions.)
             © {new Date().getFullYear()} Portfolio Builder. All rights reserved.
           </footer>
         </ThemeProvider>

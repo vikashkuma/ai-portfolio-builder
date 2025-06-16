@@ -1,10 +1,29 @@
 import { About, Experience, Education, Skill, Award, Testimonial, PortfolioStep } from '../types/portfolio';
-import { InferenceClient } from "@huggingface/inference";
 
 interface AIResponse {
   content: Partial<About | Experience[] | Education[] | Skill[] | Award[] | Testimonial[]>;
   suggestions?: string[];
 }
+
+// Section-specific prompt templates moved here from server-side
+const prompts: Record<string, (input: string) => string> = {
+  about: (input) =>
+    `Generate a professional bio section for a portfolio based on the following input. Respond with plain text only — no explanations, bullet points, numbers, or formatting tags.\n\n${input}`,
+  experience: (input) =>
+    `Generate a concise experience/role/achievement section for a portfolio based on the input below. Output plain text only, without bullet points, numbers, <think> blocks, or any other formatting.\n\n${input}`,
+  education: (input) =>
+    `Generate a clean education section for a portfolio based on this input. Do not include bullet points, numbering, <think> blocks, or any formatting. Output plain text only.\n\n${input}`,
+  skills: (input) =>
+    `List only the relevant skills for a portfolio based on this input. Output a plain, comma-separated list of skills. Do not include bullet points, numbering, <think> blocks, or any explanation.\n\n${input}`,
+  awards: (input) =>
+    `Generate an awards or recognition section for a portfolio. Respond with plain text only. Do not include bullet points, numbers, <think> blocks, or any formatting.\n\n${input}`,
+  testimonials: (input) =>
+    `Generate a testimonial suitable for a personal portfolio. Output only the testimonial content. Avoid any formatting, bullet points, <think> blocks, or explanations.\n\n${input}`,
+  contact: (input) =>
+    `Generate a simple contact section for a portfolio using the input below. Provide only the contact details as plain text — no extra formatting, no <think> blocks, no bullet points.\n\n${input}`,
+  preview: (input) =>
+    `Generate a short summary preview for a portfolio. Output only plain text content. Do not include bullet points, <think> blocks, or any extra formatting.\n\n${input}`,
+};
 
 const mockAIResponses: Record<PortfolioStep, (input: string) => AIResponse> = {
   about: (input: string) => ({
@@ -84,8 +103,6 @@ const mockAIResponses: Record<PortfolioStep, (input: string) => AIResponse> = {
   }),
 };
 
-const client = new InferenceClient(process.env.NEXT_PUBLIC_HUGGINGFACE_TOKEN);
-
 export const generateAIContent = async (
   section: PortfolioStep,
   input: string
@@ -107,36 +124,22 @@ export const enhanceContent = async (
 };
 
 export const generateContent = async (section: string, input: string): Promise<string> => {
-  // Section-specific prompt templates
-  const prompts: Record<string, (input: string) => string> = {
-    about: (input) =>
-      `Generate a professional bio section for a portfolio based on the following input. Respond with plain text only — no explanations, bullet points, numbers, or formatting tags.\n\n${input}`,
-    experience: (input) =>
-      `Generate a concise experience/role/achievement section for a portfolio based on the input below. Output plain text only, without bullet points, numbers, <think> blocks, or any other formatting.\n\n${input}`,
-    education: (input) =>
-      `Generate a clean education section for a portfolio based on this input. Do not include bullet points, numbering, <think> blocks, or any formatting. Output plain text only.\n\n${input}`,
-    skills: (input) =>
-      `List only the relevant skills for a portfolio based on this input. Output a plain, comma-separated list of skills. Do not include bullet points, numbering, <think> blocks, or any explanation.\n\n${input}`,
-    awards: (input) =>
-      `Generate an awards or recognition section for a portfolio. Respond with plain text only. Do not include bullet points, numbers, <think> blocks, or any formatting.\n\n${input}`,
-    testimonials: (input) =>
-      `Generate a testimonial suitable for a personal portfolio. Output only the testimonial content. Avoid any formatting, bullet points, <think> blocks, or explanations.\n\n${input}`,
-    contact: (input) =>
-      `Generate a simple contact section for a portfolio using the input below. Provide only the contact details as plain text — no extra formatting, no <think> blocks, no bullet points.\n\n${input}`,
-    preview: (input) =>
-      `Generate a short summary preview for a portfolio. Output only plain text content. Do not include bullet points, <think> blocks, or any extra formatting.\n\n${input}`,
-  };
-  
   const prompt = prompts[section]?.(input) || `${input}`;
-  const chatCompletion = await client.chatCompletion({
-    provider: "fireworks-ai",
-    model: "deepseek-ai/DeepSeek-R1-0528",
-    messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
+
+  const response = await fetch('/api/generate-content', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ prompt }), // Send the full prompt
   });
-  return chatCompletion.choices?.[0]?.message?.content || "";
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error('API call failed:', errorData);
+    throw new Error(errorData.error || 'Failed to generate content from API');
+  }
+
+  const data = await response.json();
+  return data.content || "";
 };

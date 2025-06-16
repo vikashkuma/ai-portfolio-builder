@@ -6,10 +6,17 @@ import { usePortfolioStore } from '../store/portfolioStore';
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { portfolio } = usePortfolioStore();
   const theme = portfolio?.theme || 'light';
+<<<<<<< HEAD
 
   return (
     <>
       {children}
     </>
+=======
+  return (
+    <div className={`${theme} bg-background text-foreground min-h-screen flex flex-col`}>
+      {children}
+    </div>
+>>>>>>> 3757bbd (Implement UI/UX improvements, add contact & features pages, and enhance AI suggestions.)
   );
 } 
