@@ -13,7 +13,24 @@ const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const theme = localStorage.getItem('portfolio-builder-theme') || 'light';
+                document.documentElement.className = theme;
+                document.documentElement.classList.add('bg-background');
+                document.documentElement.classList.add('text-foreground');
+                document.documentElement.classList.add('min-h-screen');
+                document.documentElement.classList.add('flex');
+                document.documentElement.classList.add('flex-col');
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className={inter.className}>
         <ThemeProvider>
           {/* Header */}
@@ -26,11 +43,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </header>
           {/* Main Content */}
-          <main className="flex-1 flex flex-col items-center justify-start w-full px-4 py-8 bg-background text-foreground">
+          <main className="flex-1 flex flex-col items-center justify-start w-full px-4 py-8">
             {children}
           </main>
           {/* Footer */}
-          <footer className="w-full text-center text-xs text-foreground py-4 border-t border-border bg-background mt-8">
+          <footer className="w-full text-center text-xs text-foreground py-4 border-t border-border mt-8">
             © {new Date().getFullYear()} Portfolio Builder. All rights reserved.
           </footer>
         </ThemeProvider>
