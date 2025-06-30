@@ -14,7 +14,7 @@ const prompts: Record<string, (input: string) => string> = {
   education: (input) =>
     `Generate a clean education section for a portfolio based on this input. Do not include bullet points, numbering, <think> blocks, or any formatting. Output plain text only.\n\n${input}`,
   skills: (input) =>
-    `List only the relevant skills for a portfolio based on this input. Output a plain, comma-separated list of skills. Do not include bullet points, numbering, <think> blocks, or any explanation.\n\n${input}`,
+    `Generate a List of only the relevant skills related to ${input} for a portfolio based on this input. Output a plain, comma-separated list of skills. Do not include sentence, bullet points, numbering, <think> blocks, or any explanation.`,
   awards: (input) =>
     `Generate an awards or recognition section for a portfolio. Respond with plain text only. Do not include bullet points, numbers, <think> blocks, or any formatting.\n\n${input}`,
   testimonials: (input) =>
@@ -123,23 +123,98 @@ export const enhanceContent = async (
   return mockAIResponses[section](content);
 };
 
+// MCP Server configuration
+const MCP_SERVER_URL = process.env.NEXT_PUBLIC_MCP_SERVER_URL || 'http://localhost:3001';
+
 export const generateContent = async (section: string, input: string): Promise<string> => {
-  const prompt = prompts[section]?.(input) || `${input}`;
+  try {
+    // Try MCP server first
+    const response = await fetch(`${MCP_SERVER_URL}/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        section, 
+        input,
+        context: { timestamp: Date.now() }
+      }),
+    });
 
-  const response = await fetch('/api/generate-content', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ prompt }), // Send the full prompt
-  });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.data?.content) {
+        return data.data.content;
+      }
+    }
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error('API call failed:', errorData);
-    throw new Error(errorData.error || 'Failed to generate content from API');
+    // Fallback to mock responses if MCP server is not available
+    console.warn('MCP server not available, using mock responses');
+    const mockResponse = mockAIResponses[section as PortfolioStep]?.(input);
+    if (mockResponse?.content) {
+      if ('bio' in mockResponse.content && mockResponse.content.bio) {
+        return mockResponse.content.bio;
+      }
+      if ('description' in mockResponse.content && typeof mockResponse.content.description === 'string') {
+        return mockResponse.content.description;
+      }
+    }
+    return input;
+
+  } catch (error) {
+    console.error('Error calling MCP server:', error);
+    
+    // Fallback to mock responses
+    const mockResponse = mockAIResponses[section as PortfolioStep]?.(input);
+    if (mockResponse?.content) {
+      if ('bio' in mockResponse.content && mockResponse.content.bio) {
+        return mockResponse.content.bio;
+      }
+      if ('description' in mockResponse.content && typeof mockResponse.content.description === 'string') {
+        return mockResponse.content.description;
+      }
+    }
+    return input;
   }
+};
 
-  const data = await response.json();
-  return data.content || "";
+// New function to get available models
+export const getAvailableModels = async () => {
+  try {
+    const response = await fetch(`${MCP_SERVER_URL}/models`);
+    if (response.ok) {
+      const data = await response.json();
+      return data;
+    }
+  } catch (error) {
+    console.error('Error getting available models:', error);
+  }
+  
+  return {
+    success: false,
+    models: [],
+    current: null
+  };
+};
+
+// New function to switch models
+export const switchModel = async (provider: string, config?: any) => {
+  try {
+    const response = await fetch(`${MCP_SERVER_URL}/switch-model`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ provider, config }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data;
+    }
+  } catch (error) {
+    console.error('Error switching model:', error);
+  }
+  
+  return { success: false };
 };

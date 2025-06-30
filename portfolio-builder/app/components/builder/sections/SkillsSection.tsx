@@ -81,7 +81,7 @@ export const SkillsSection = ({ onUpdate, initialData }: SkillsSectionProps) => 
     setIsGenerating(true);
     const toastId = toast.loading('Generating AI content...');
     try {
-      const input = `Current skills: ${skills.map(s => s.name).join(', ')}`;
+      const input = `Current skills: ${skills.map(s => `${s.name} (${s.level})`).join(', ')}`;
       const generated = await generateContent('skills', input);
       const skillsList = generated.split(',').map(s => s.trim());
       setSuggestedSkills(skillsList);

@@ -6,6 +6,8 @@ import Button from '../../ui/Button';
 import { generateContent } from '../../../utils/ai';
 import toast from 'react-hot-toast';
 import { FaPlus, FaTrash, FaRobot } from 'react-icons/fa';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 interface ExperienceSectionProps {
   onUpdate: (data: any) => void;
@@ -16,10 +18,31 @@ export const ExperienceSection = ({ onUpdate, initialData }: ExperienceSectionPr
   const [experiences, setExperiences] = useState<Array<{
     title: string;
     company: string;
-    startDate: string;
-    endDate: string;
+    startDate: Date | null;
+    endDate: Date | string | null;
     description: string;
-  }>>(initialData?.experiences || [{ title: '', company: '', startDate: '', endDate: '', description: '' }]);
+  }>>(
+    initialData?.experiences
+      ? initialData.experiences.map((exp: any) => ({
+          ...exp,
+          startDate: exp.startDate ? new Date(exp.startDate) : null,
+          endDate:
+            exp.endDate && exp.endDate.toLowerCase() === 'present'
+              ? 'Present'
+              : exp.endDate
+              ? new Date(exp.endDate)
+              : null,
+        }))
+      : [
+          {
+            title: '',
+            company: '',
+            startDate: null,
+            endDate: null,
+            description: '',
+          },
+        ]
+  );
 
   const [errors, setErrors] = useState<{ [key: string]: string | null }>({});
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
@@ -46,31 +69,19 @@ export const ExperienceSection = ({ onUpdate, initialData }: ExperienceSectionPr
       newErrors[`experience-${index}-company`] = 'Company name must not exceed 100 characters.';
     }
 
-    if (!entry.startDate.trim()) {
+    if (!entry.startDate) {
       newErrors[`experience-${index}-startDate`] = 'Start Date is required.';
-    } else {
-      const dateRegex = /^\d{4}(-\d{2})?$/;
-      if (!dateRegex.test(entry.startDate)) {
-        newErrors[`experience-${index}-startDate`] = 'Date must be in YYYY or YYYY-MM format.';
-      }
     }
 
-    if (!entry.endDate.trim()) {
+    if (!entry.endDate) {
       newErrors[`experience-${index}-endDate`] = 'End Date is required.';
-    } else if (entry.endDate.toLowerCase() !== 'present') {
-      const dateRegex = /^\d{4}(-\d{2})?$/;
-      if (!dateRegex.test(entry.endDate)) {
-        newErrors[`experience-${index}-endDate`] = 'Date must be in YYYY or YYYY-MM format, or \'Present\'.';
-      }
-    }
-
-    if (entry.startDate && entry.endDate && entry.endDate.toLowerCase() !== 'present') {
-      const startYear = parseInt(entry.startDate.split('-')[0], 10);
-      const startMonth = entry.startDate.split('-')[1] ? parseInt(entry.startDate.split('-')[1], 10) - 1 : 0;
+    } else if (entry.endDate !== 'Present' && entry.endDate !== 'Present') {
+      const startYear = entry.startDate ? entry.startDate.getFullYear() : 0;
+      const startMonth = entry.startDate ? entry.startDate.getMonth() : 0;
       const start = new Date(startYear, startMonth, 1);
 
-      const endYear = parseInt(entry.endDate.split('-')[0], 10);
-      const endMonth = entry.endDate.split('-')[1] ? parseInt(entry.endDate.split('-')[1], 10) - 1 : 0;
+      const endYear = entry.endDate instanceof Date ? entry.endDate.getFullYear() : 0;
+      const endMonth = entry.endDate instanceof Date ? entry.endDate.getMonth() : 0;
       const end = new Date(endYear, endMonth, 1);
 
       if (start.getTime() > end.getTime()) {
@@ -103,16 +114,38 @@ export const ExperienceSection = ({ onUpdate, initialData }: ExperienceSectionPr
     setErrors(newErrors);
   }, [experiences, validateAllExperiences]);
 
-  const handleExperienceChange = (index: number, field: keyof typeof experiences[0], value: string) => {
+  const handleExperienceChange = (
+    index: number,
+    field: keyof typeof experiences[0],
+    value: any
+  ) => {
     const newExperiences = [...experiences];
-    newExperiences[index] = { ...newExperiences[index], [field]: value };
+    if (field === 'endDate' && value === 'Present') {
+      newExperiences[index][field] = 'Present';
+    } else {
+      newExperiences[index][field] = value;
+    }
     setExperiences(newExperiences);
-    setTouched(prev => ({ ...prev, [`experience-${index}-${field}`]: true }));
-    onUpdate({ experiences: newExperiences });
+    setTouched((prev) => ({ ...prev, [`experience-${index}-${field}`]: true }));
+    // Prepare data for onUpdate: convert Date objects to ISO strings, keep 'Present' as is
+    const dataForUpdate = newExperiences.map((exp) => ({
+      ...exp,
+      startDate:
+        exp.startDate instanceof Date && !isNaN(exp.startDate.getTime())
+          ? exp.startDate.toISOString()
+          : '',
+      endDate:
+        exp.endDate === 'Present'
+          ? 'Present'
+          : exp.endDate instanceof Date && !isNaN(exp.endDate.getTime())
+          ? exp.endDate.toISOString()
+          : '',
+    }));
+    onUpdate({ experiences: dataForUpdate });
   };
 
   const handleAddExperience = () => {
-    const newExperiences = [...experiences, { title: '', company: '', startDate: '', endDate: '', description: '' }];
+    const newExperiences = [...experiences, { title: '', company: '', startDate: null, endDate: null, description: '' }];
     setExperiences(newExperiences);
     onUpdate({ experiences: newExperiences });
   };
@@ -231,15 +264,17 @@ export const ExperienceSection = ({ onUpdate, initialData }: ExperienceSectionPr
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor={`startDate-${index}`} className="block text-sm font-medium text-foreground">
-                Start Date (YYYY or YYYY-MM)
+                Start Date
               </label>
-              <input
-                type="text"
-                id={`startDate-${index}`}
-                value={experience.startDate}
-                onChange={(e) => handleExperienceChange(index, 'startDate', e.target.value)}
+              <DatePicker
+                selected={experience.startDate instanceof Date ? experience.startDate : null}
+                onChange={(date) => handleExperienceChange(index, 'startDate', date)}
                 onBlur={() => handleBlur(index, 'startDate')}
-                placeholder="2020-01"
+                dateFormat="yyyy-MM-dd"
+                showYearDropdown
+                showMonthDropdown
+                dropdownMode="select"
+                placeholderText="YYYY-MM-DD"
                 className={`mt-1 block w-full rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500
                   ${touched[`experience-${index}-startDate`] && errors[`experience-${index}-startDate`] ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
                 `}
@@ -250,19 +285,32 @@ export const ExperienceSection = ({ onUpdate, initialData }: ExperienceSectionPr
             </div>
             <div>
               <label htmlFor={`endDate-${index}`} className="block text-sm font-medium text-foreground">
-                End Date (YYYY or YYYY-MM or 'Present')
+                End Date
               </label>
-              <input
-                type="text"
-                id={`endDate-${index}`}
-                value={experience.endDate}
-                onChange={(e) => handleExperienceChange(index, 'endDate', e.target.value)}
-                onBlur={() => handleBlur(index, 'endDate')}
-                placeholder="2023-12 or Present"
-                className={`mt-1 block w-full rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500
-                  ${touched[`experience-${index}-endDate`] && errors[`experience-${index}-endDate`] ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
-                `}
-              />
+              <div className="flex gap-2 items-center">
+                <DatePicker
+                  selected={experience.endDate instanceof Date ? experience.endDate : null}
+                  onChange={(date) => handleExperienceChange(index, 'endDate', date)}
+                  onBlur={() => handleBlur(index, 'endDate')}
+                  dateFormat="yyyy-MM-dd"
+                  showYearDropdown
+                  showMonthDropdown
+                  dropdownMode="select"
+                  placeholderText="YYYY-MM-DD or Present"
+                  className={`mt-1 block w-full rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500
+                    ${touched[`experience-${index}-endDate`] && errors[`experience-${index}-endDate`] ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
+                  `}
+                  disabled={experience.endDate === 'Present'}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={experience.endDate === 'Present' ? 'secondary' : 'outline'}
+                  onClick={() => handleExperienceChange(index, 'endDate', 'Present')}
+                >
+                  Present
+                </Button>
+              </div>
               {touched[`experience-${index}-endDate`] && errors[`experience-${index}-endDate`] && (
                 <p className="text-red-500 text-sm mt-1">{errors[`experience-${index}-endDate`]}</p>
               )}
