@@ -11,7 +11,7 @@ import { SkillsSection } from '../../components/builder/sections/SkillsSection';
 import { AwardsSection } from '../../components/builder/sections/AwardsSection';
 import { TestimonialsSection } from '../../components/builder/sections/TestimonialsSection';
 import { ContactSection } from '../../components/builder/sections/ContactSection';
-import { ThemeSelector } from '../../components/builder/ThemeSelector';
+
 import { PortfolioPreview } from '../../components/builder/PortfolioPreview';
 import Button from '../../components/ui/Button';
 
@@ -23,8 +23,7 @@ const steps = [
   { id: 5, key: 'awards', title: 'Awards', description: 'Achievements' },
   { id: 6, key: 'testimonials', title: 'Testimonials', description: 'Client feedback' },
   { id: 7, key: 'contact', title: 'Contact', description: 'Contact information' },
-  { id: 8, key: 'theme', title: 'Theme', description: 'Choose your theme' },
-  { id: 9, key: 'preview', title: 'Preview', description: 'Preview your portfolio' },
+  { id: 8, key: 'preview', title: 'Preview', description: 'Preview your portfolio' },
 ];
 
 const sectionComponents: Record<string, any> = {
@@ -48,7 +47,7 @@ export default function BuilderSectionPage() {
   const [showDeviceModal, setShowDeviceModal] = useState(false);
 
   useEffect(() => {
-    if (!section || (!(section in sectionComponents) && section !== 'theme' && section !== 'preview')) {
+    if (!section || (!(section in sectionComponents) && section !== 'preview')) {
       router.replace('/builder/about');
     }
   }, [section, router]);
@@ -82,28 +81,7 @@ export default function BuilderSectionPage() {
         {/* Preview always below steps except in preview step */}
         {/* Section Form, Theme Selector, or Preview Tab */}
         <div className="bg-white rounded-lg shadow p-6">
-          {section === 'theme' ? (
-            <div>
-              <h2 className="text-2xl font-bold mb-4">Choose Your Theme</h2>
-              <ThemeSelector
-                  onSelect={(theme) => {
-                    updatePortfolio({ theme });
-                    // Set Tailwind's dark mode class for dark theme, otherwise remove it
-                    if (theme === 'dark') {
-                      document.documentElement.className = 'dark';
-                    } else {
-                      document.documentElement.className = '';
-                    }
-                    localStorage.setItem('portfolio-builder-theme', theme);
-                  }}
-                  selectedTheme={theme}
-              />
-              <div className="mt-8 flex justify-end">
-                <Button onClick={handleBack} variant="outline" className="mr-2">Back</Button>
-                <Button onClick={handleNext}>Next</Button>
-              </div>
-            </div>
-          ) : section === 'preview' ? (
+          {section === 'preview' ? (
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold">Preview Your Portfolio</h2>

@@ -75,21 +75,23 @@ export const ExperienceSection = ({ onUpdate, initialData }: ExperienceSectionPr
 
     if (!entry.endDate) {
       newErrors[`experience-${index}-endDate`] = 'End Date is required.';
-    } else if (entry.endDate !== 'Present' && entry.endDate !== 'Present') {
-      const startYear = entry.startDate ? entry.startDate.getFullYear() : 0;
-      const startMonth = entry.startDate ? entry.startDate.getMonth() : 0;
-      const start = new Date(startYear, startMonth, 1);
+    } else if (entry.endDate !== 'Present') {
+      if (entry.startDate instanceof Date && entry.endDate instanceof Date) {
+        const startYear = entry.startDate.getFullYear();
+        const startMonth = entry.startDate.getMonth();
+        const start = new Date(startYear, startMonth, 1);
 
-      const endYear = entry.endDate instanceof Date ? entry.endDate.getFullYear() : 0;
-      const endMonth = entry.endDate instanceof Date ? entry.endDate.getMonth() : 0;
-      const end = new Date(endYear, endMonth, 1);
+        const endYear = entry.endDate.getFullYear();
+        const endMonth = entry.endDate.getMonth();
+        const end = new Date(endYear, endMonth, 1);
 
-      if (start.getTime() > end.getTime()) {
-        newErrors[`experience-${index}-endDate`] = 'End Date cannot be before Start Date.';
+        if (start.getTime() > end.getTime()) {
+          newErrors[`experience-${index}-endDate`] = 'End Date cannot be before Start Date.';
+        }
       }
     }
 
-    if (!entry.description.trim()) {
+    if (!entry.description || !entry.description.trim()) {
       newErrors[`experience-${index}-description`] = 'Description is required.';
     } else if (entry.description.length < 50) {
       newErrors[`experience-${index}-description`] = 'Description must be at least 50 characters long.';

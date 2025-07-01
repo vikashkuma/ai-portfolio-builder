@@ -20,6 +20,7 @@ export const TestimonialsSection = ({ onUpdate, initialData }: TestimonialsSecti
   }>>(initialData?.testimonials || [{ name: '', role: '', content: '' }]);
 
   const [errors, setErrors] = useState<{ [key: string]: string | null }>({});
+  const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [suggestedTestimonials, setSuggestedTestimonials] = useState<string[]>([]);
 
@@ -59,13 +60,23 @@ export const TestimonialsSection = ({ onUpdate, initialData }: TestimonialsSecti
   // Effect to re-validate whenever testimonials change
   useEffect(() => {
     const newErrors = validateTestimonialsPure(testimonials);
-    setErrors(newErrors);
-  }, [testimonials, validateTestimonialsPure]);
+    const touchedErrors: { [key: string]: string | null } = {};
+    
+    // Only show errors for fields that have been touched
+    Object.keys(newErrors).forEach(key => {
+      if (touched[key]) {
+        touchedErrors[key] = newErrors[key];
+      }
+    });
+    
+    setErrors(touchedErrors);
+  }, [testimonials, touched, validateTestimonialsPure]);
 
   const handleTestimonialChange = (index: number, field: 'name' | 'role' | 'content', value: string) => {
     const newTestimonials = [...testimonials];
     newTestimonials[index] = { ...newTestimonials[index], [field]: value };
     setTestimonials(newTestimonials);
+    setTouched(prev => ({ ...prev, [`testimonial-${index}-${field}`]: true }));
     onUpdate({ testimonials: newTestimonials });
   };
 
@@ -79,12 +90,29 @@ export const TestimonialsSection = ({ onUpdate, initialData }: TestimonialsSecti
     const newTestimonials = testimonials.filter((_, i) => i !== index);
     setTestimonials(newTestimonials);
     onUpdate({ testimonials: newTestimonials });
+
+    // Clean up touched state for removed testimonial
+    const newTouched = { ...touched };
+    Object.keys(newTouched).forEach(key => {
+      if (key.startsWith(`testimonial-${index}-`)) {
+        delete newTouched[key];
+      }
+    });
+    setTouched(newTouched);
   };
 
   const handleGenerateAI = async () => {
     const newErrors = validateTestimonialsPure(testimonials);
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      // Mark all fields as touched to show errors
+      const newTouched: { [key: string]: boolean } = {};
+      testimonials.forEach((_, index) => {
+        newTouched[`testimonial-${index}-name`] = true;
+        newTouched[`testimonial-${index}-role`] = true;
+        newTouched[`testimonial-${index}-content`] = true;
+      });
+      setTouched(prev => ({ ...prev, ...newTouched }));
       toast.error('Please fix the errors before generating AI content.');
       return;
     }
@@ -123,11 +151,12 @@ export const TestimonialsSection = ({ onUpdate, initialData }: TestimonialsSecti
                 id={`testimonial-${index}-name`}
                 value={testimonial.name}
                 onChange={(e) => handleTestimonialChange(index, 'name', e.target.value)}
+                onBlur={() => setTouched(prev => ({ ...prev, [`testimonial-${index}-name`]: true }))}
                 className={`mt-1 block w-full rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500
-                  ${errors[`testimonial-${index}-name`] ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
+                  ${touched[`testimonial-${index}-name`] && errors[`testimonial-${index}-name`] ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
                 `}
               />
-              {errors[`testimonial-${index}-name`] && (
+              {touched[`testimonial-${index}-name`] && errors[`testimonial-${index}-name`] && (
                 <p className="text-red-500 text-sm mt-1">{errors[`testimonial-${index}-name`]}</p>
               )}
             </div>
@@ -141,11 +170,12 @@ export const TestimonialsSection = ({ onUpdate, initialData }: TestimonialsSecti
                 id={`testimonial-${index}-role`}
                 value={testimonial.role}
                 onChange={(e) => handleTestimonialChange(index, 'role', e.target.value)}
+                onBlur={() => setTouched(prev => ({ ...prev, [`testimonial-${index}-role`]: true }))}
                 className={`mt-1 block w-full rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500
-                  ${errors[`testimonial-${index}-role`] ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
+                  ${touched[`testimonial-${index}-role`] && errors[`testimonial-${index}-role`] ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
                 `}
               />
-              {errors[`testimonial-${index}-role`] && (
+              {touched[`testimonial-${index}-role`] && errors[`testimonial-${index}-role`] && (
                 <p className="text-red-500 text-sm mt-1">{errors[`testimonial-${index}-role`]}</p>
               )}
             </div>
@@ -161,13 +191,14 @@ export const TestimonialsSection = ({ onUpdate, initialData }: TestimonialsSecti
                 id={`testimonial-${index}-content`}
                 value={testimonial.content}
                 onChange={(e) => handleTestimonialChange(index, 'content', e.target.value)}
+                onBlur={() => setTouched(prev => ({ ...prev, [`testimonial-${index}-content`]: true }))}
                 rows={4}
                 maxLength={500}
                 className={`mt-1 block w-full rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500
-                  ${errors[`testimonial-${index}-content`] ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
+                  ${touched[`testimonial-${index}-content`] && errors[`testimonial-${index}-content`] ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
                 `}
               />
-              {errors[`testimonial-${index}-content`] && (
+              {touched[`testimonial-${index}-content`] && errors[`testimonial-${index}-content`] && (
                 <p className="text-red-500 text-sm mt-1">{errors[`testimonial-${index}-content`]}</p>
               )}
             </div>

@@ -123,19 +123,19 @@ export const EducationSection = ({ onUpdate, initialData }: EducationSectionProp
 
     if (!edu.startDate) {
       newErrors.startDate = 'Start Date is required.';
-    } else if (isNaN(edu.startDate.getTime())) { // Check for invalid date objects
+    } else if (!(edu.startDate instanceof Date) || isNaN(edu.startDate.getTime())) { // Check for invalid date objects
       newErrors.startDate = 'Invalid Start Date format.';
     }
     
     if (!edu.endDate) {
       newErrors.endDate = 'End Date is required.';
-    } else if (edu.endDate.toString().toLowerCase() !== 'present' && isNaN(edu.endDate.getTime())) { // Check for invalid date objects unless 'present'
+    } else if (edu.endDate.toString().toLowerCase() !== 'present' && (!(edu.endDate instanceof Date) || isNaN(edu.endDate.getTime()))) { // Check for invalid date objects unless 'present'
       newErrors.endDate = 'Invalid End Date format.';
-    } else if (edu.startDate && edu.endDate && edu.endDate.toString().toLowerCase() !== 'present' && edu.startDate > edu.endDate) {
+    } else if (edu.startDate && edu.endDate && edu.endDate.toString().toLowerCase() !== 'present' && edu.startDate instanceof Date && edu.endDate instanceof Date && edu.startDate > edu.endDate) {
       newErrors.endDate = 'End Date cannot be before Start Date.';
     }
 
-    if (!edu.description.trim()) {
+    if (!edu.description || !edu.description.trim()) {
       newErrors.description = 'Description is required.';
     } else if (edu.description.length < 50) {
       newErrors.description = 'Description must be at least 50 characters long.';
@@ -179,7 +179,7 @@ export const EducationSection = ({ onUpdate, initialData }: EducationSectionProp
 
   // Helper to format dates into a period string
   const formatPeriod = useCallback((startDate: Date | null | undefined, endDate: Date | null | undefined): string => {
-    if (!startDate) return '';
+    if (!startDate || !(startDate instanceof Date)) return '';
 
     const startYear = startDate.getFullYear();
     const startMonth = startDate.getMonth() + 1; // getMonth() is 0-indexed
@@ -189,13 +189,26 @@ export const EducationSection = ({ onUpdate, initialData }: EducationSectionProp
       return startFormatted;
     } else if (endDate.toString().toLowerCase() === 'present') {
       return `${startFormatted} - Present`;
-    } else {
+    } else if (endDate instanceof Date) {
       const endYear = endDate.getFullYear();
       const endMonth = endDate.getMonth() + 1;
       const endFormatted = `${endYear}-${String(endMonth).padStart(2, '0')}`;
       return `${startFormatted} - ${endFormatted}`;
     }
+    return startFormatted;
   }, []);
+
+  // Effect to convert string dates to Date objects if initialData contains string dates
+  useEffect(() => {
+    if (initialData?.education) {
+      const convertedEducations = initialData.education.map((edu: any) => ({
+        ...edu,
+        startDate: typeof edu.startDate === 'string' && edu.startDate ? new Date(edu.startDate) : edu.startDate,
+        endDate: typeof edu.endDate === 'string' && edu.endDate && edu.endDate.toLowerCase() !== 'present' ? new Date(edu.endDate) : edu.endDate
+      }));
+      setEducations(convertedEducations);
+    }
+  }, [initialData]);
 
   // Ensure at least one education form is open by default without causing re-renders
   useEffect(() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Button from '../../ui/Button';
 import { generateContent } from '../../../utils/ai';
@@ -13,14 +13,18 @@ interface ContactSectionProps {
 }
 
 export const ContactSection = ({ onUpdate, initialData }: ContactSectionProps) => {
+  const onUpdateRef = useRef(onUpdate);
+  const initializedRef = useRef(false);
+  onUpdateRef.current = onUpdate;
+
   const [formData, setFormData] = useState({
-    email: initialData?.email || '',
-    phone: initialData?.phone || '',
-    linkedin: initialData?.linkedin || '',
-    website: initialData?.website || '',
-    github: initialData?.github || '',
-    twitter: initialData?.twitter || '',
-    address: initialData?.address || '',
+    email: initialData?.contact?.email || '',
+    phone: initialData?.contact?.phone || '',
+    linkedin: initialData?.contact?.linkedin || '',
+    website: initialData?.contact?.website || '',
+    github: initialData?.contact?.github || '',
+    twitter: initialData?.contact?.twitter || '',
+    address: initialData?.contact?.address || '',
   });
 
   const [errors, setErrors] = useState<{ [key: string]: string | null }>({});
@@ -61,26 +65,54 @@ export const ContactSection = ({ onUpdate, initialData }: ContactSectionProps) =
     return newErrors;
   }, []);
 
-  // Effect to re-validate whenever form data changes
-  useEffect(() => {
-    const newErrors = validateContactFormPure(formData);
-    setErrors(newErrors);
-  }, [formData, validateContactFormPure]);
 
-  // Ensure at least one contact form is open by default
+
+  // Initialize form data when component mounts with initial data
   useEffect(() => {
-    if (!formData.email && !formData.phone && !formData.linkedin && !formData.website && !formData.address) {
-      setFormData({ email: '', phone: '', linkedin: '', website: '', address: '' });
-      onUpdate({ contact: { email: '', phone: '', linkedin: '', website: '', address: '' } });
+    if (initializedRef.current) return;
+    
+    console.log('ContactSection initialData:', initialData);
+    if (initialData?.contact) {
+      const contactData = initialData.contact;
+      console.log('ContactSection contactData:', contactData);
+      const updatedFormData = {
+        email: contactData.email || '',
+        phone: contactData.phone || '',
+        linkedin: contactData.linkedin || '',
+        website: contactData.website || '',
+        github: contactData.github || '',
+        twitter: contactData.twitter || '',
+        address: contactData.address || '',
+      };
+      console.log('ContactSection setting initial formData:', updatedFormData);
+      setFormData(updatedFormData);
+      // Only update if there's actual data to avoid overriding with empty values
+      if (Object.values(updatedFormData).some(value => value)) {
+        console.log('ContactSection calling onUpdate with initial data');
+        onUpdateRef.current({ contact: updatedFormData });
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    initializedRef.current = true;
+  }, [initialData]);
+
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    console.log('ContactSection input change:', name, value, 'current formData:', formData);
+    setFormData(prevFormData => {
+      const updatedFormData = { ...prevFormData, [name]: value };
+      console.log('ContactSection updated formData:', updatedFormData);
+      
+      // Validate the updated form data
+      const newErrors = validateContactFormPure(updatedFormData);
+      setErrors(newErrors);
+      
+      // Call onUpdate with the updated data immediately
+      onUpdateRef.current({ contact: updatedFormData });
+      return updatedFormData;
+    });
     setTouched(prev => ({ ...prev, [name]: true }));
-    onUpdate({ ...formData, [name]: value });
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {

@@ -84,15 +84,33 @@ export const PortfolioPreview = ({ portfolioData, theme, device: deviceProp }: P
                 <BriefcaseIcon className="w-6 h-6 text-purple-500" />
                 <h2 className="text-2xl font-semibold text-purple-700">Experience</h2>
               </div>
-              {portfolioData.experience && portfolioData.experience.length > 0 ? (
-                portfolioData.experience.map((exp: any) => (
-                  <div key={exp.id} className="mb-4 ml-8">
-                    <h3 className="font-medium">{exp.title}</h3>
-                    <p>{exp.company}</p>
-                    <p className="text-sm">{exp.period}</p>
-                    <p className="text-sm text-foreground/70">{exp.description}</p>
-                  </div>
-                ))
+              {portfolioData.experiences && portfolioData.experiences.length > 0 ? (
+                portfolioData.experiences.map((exp: any, index: number) => {
+                  // Format dates for display
+                  const formatDate = (dateString: string) => {
+                    if (!dateString) return '';
+                    if (dateString === 'Present') return 'Present';
+                    try {
+                      const date = new Date(dateString);
+                      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+                    } catch {
+                      return dateString;
+                    }
+                  };
+                  
+                  const startDate = formatDate(exp.startDate);
+                  const endDate = formatDate(exp.endDate);
+                  const period = startDate && endDate ? `${startDate} - ${endDate}` : startDate || endDate;
+                  
+                  return (
+                    <div key={exp.id || index} className="mb-4 ml-8">
+                      <h3 className="font-medium">{exp.title}</h3>
+                      <p>{exp.company}</p>
+                      {period && <p className="text-sm">{period}</p>}
+                      <p className="text-sm text-foreground/70">{exp.description}</p>
+                    </div>
+                  );
+                })
               ) : (
                 <p className="ml-8 text-foreground/50 italic">No experience added yet.</p>
               )}
@@ -153,20 +171,32 @@ export const PortfolioPreview = ({ portfolioData, theme, device: deviceProp }: P
                 <h2 className="text-2xl font-semibold text-yellow-700">Awards</h2>
               </div>
               {portfolioData.awards && portfolioData.awards.length > 0 ? (
-                portfolioData.awards.map((award: any) => (
-                  <div key={award.id} className="mb-4 ml-8">
-                    {award.title && <h3 className="font-medium">{award.title}</h3>}
-                    {(award.issuer || award.year) && (
-                      <p>
-                        {award.issuer ? award.issuer : ''}
-                        {award.issuer && award.year ? ' (' : ''}
-                        {award.year ? award.year : ''}
-                        {award.issuer && award.year ? ')' : ''}
-                      </p>
-                    )}
-                    {award.description && <p className="text-sm text-foreground/70">{award.description}</p>}
-                  </div>
-                ))
+                portfolioData.awards.map((award: any, index: number) => {
+                  // Format date for display
+                  const formatDate = (date: Date | string | null) => {
+                    if (!date) return '';
+                    if (date instanceof Date) {
+                      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+                    }
+                    if (typeof date === 'string') {
+                      try {
+                        const dateObj = new Date(date);
+                        return dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+                      } catch {
+                        return date;
+                      }
+                    }
+                    return '';
+                  };
+                  
+                  return (
+                    <div key={award.id || index} className="mb-4 ml-8">
+                      {award.name && <h3 className="font-medium">{award.name}</h3>}
+                      {award.date && <p className="text-sm">{formatDate(award.date)}</p>}
+                      {award.description && <p className="text-sm text-foreground/70">{award.description}</p>}
+                    </div>
+                  );
+                })
               ) : (
                 <p className="ml-8 text-foreground/50 italic">No awards added yet.</p>
               )}
@@ -179,16 +209,15 @@ export const PortfolioPreview = ({ portfolioData, theme, device: deviceProp }: P
                 <h2 className="text-2xl font-semibold text-pink-700">Testimonials</h2>
               </div>
               {portfolioData.testimonials && portfolioData.testimonials.length > 0 ? (
-                portfolioData.testimonials.map((testimonial: any) => (
-                  <div key={testimonial.id} className="mb-4 ml-8">
-                    {(testimonial.feedback || testimonial.content) && (
-                      <blockquote className="italic">{testimonial.feedback || testimonial.content}</blockquote>
+                portfolioData.testimonials.map((testimonial: any, index: number) => (
+                  <div key={testimonial.id || index} className="mb-4 ml-8">
+                    {testimonial.content && (
+                      <blockquote className="italic">{testimonial.content}</blockquote>
                     )}
-                    {(testimonial.name || testimonial.role || testimonial.company) && (
+                    {(testimonial.name || testimonial.role) && (
                       <p className="text-sm mt-2">
                         {testimonial.name ? `- ${testimonial.name}` : ''}
                         {testimonial.role ? `, ${testimonial.role}` : ''}
-                        {testimonial.company ? ` at ${testimonial.company}` : ''}
                       </p>
                     )}
                   </div>
@@ -204,19 +233,26 @@ export const PortfolioPreview = ({ portfolioData, theme, device: deviceProp }: P
                 <PhoneIcon className="w-6 h-6 text-cyan-500" />
                 <h2 className="text-2xl font-semibold text-cyan-700">Contact</h2>
               </div>
-              {(portfolioData.contact && (
-                portfolioData.contact.email ||
-                portfolioData.contact.phone ||
-                portfolioData.contact.linkedin ||
-                portfolioData.contact.website ||
-                portfolioData.contact.intro
-              )) ? (
+              {(() => {
+                console.log('PortfolioPreview contact data:', portfolioData.contact);
+                return (portfolioData.contact && (
+                  portfolioData.contact.email ||
+                  portfolioData.contact.phone ||
+                  portfolioData.contact.linkedin ||
+                  portfolioData.contact.website ||
+                  portfolioData.contact.github ||
+                  portfolioData.contact.twitter ||
+                  portfolioData.contact.address
+                ));
+              })() ? (
                 <div className="ml-8 space-y-1">
                   {portfolioData.contact.email && <p>Email: {portfolioData.contact.email}</p>}
                   {portfolioData.contact.phone && <p>Phone: {portfolioData.contact.phone}</p>}
                   {portfolioData.contact.linkedin && <p>LinkedIn: {portfolioData.contact.linkedin}</p>}
                   {portfolioData.contact.website && <p>Website: {portfolioData.contact.website}</p>}
-                  {portfolioData.contact.intro && <p className="text-sm text-foreground/70">{portfolioData.contact.intro}</p>}
+                  {portfolioData.contact.github && <p>GitHub: {portfolioData.contact.github}</p>}
+                  {portfolioData.contact.twitter && <p>Twitter: {portfolioData.contact.twitter}</p>}
+                  {portfolioData.contact.address && <p>Address: {portfolioData.contact.address}</p>}
                 </div>
               ) : (
                 <p className="ml-8 text-foreground/50 italic">No contact information added yet.</p>

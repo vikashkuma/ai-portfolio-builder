@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Button from '../../ui/Button';
 import { generateContent } from '../../../utils/ai';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import toast from 'react-hot-toast';
 import { FaPlus, FaTrash, FaRobot } from 'react-icons/fa';
 
@@ -15,9 +17,9 @@ interface AwardsSectionProps {
 export const AwardsSection = ({ onUpdate, initialData }: AwardsSectionProps) => {
   const [awards, setAwards] = useState<Array<{
     name: string;
-    date: string;
+    date: Date | null;
     description: string;
-  }>>(initialData?.awards || [{ name: '', date: '', description: '' }]);
+  }>>(initialData?.awards || [{ name: '', date: null, description: '' }]);
 
   const [errors, setErrors] = useState<{ [key: string]: string | null }>({});
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
@@ -37,16 +39,13 @@ export const AwardsSection = ({ onUpdate, initialData }: AwardsSectionProps) => 
         newErrors[`award-${index}-name`] = 'Award name must not exceed 100 characters.';
       }
 
-      if (!award.date.trim()) {
+      if (!award.date) {
         newErrors[`award-${index}-date`] = 'Date is required.';
-      } else {
-        const dateRegex = /^\d{4}(-\d{2})?$/;
-        if (!dateRegex.test(award.date)) {
-          newErrors[`award-${index}-date`] = 'Date must be in YYYY or YYYY-MM format.';
-        }
+      } else if (!(award.date instanceof Date) || isNaN(award.date.getTime())) {
+        newErrors[`award-${index}-date`] = 'Invalid date format.';
       }
 
-      if (!award.description.trim()) {
+      if (!award.description || !award.description.trim()) {
         newErrors[`award-${index}-description`] = 'Description is required.';
       } else if (award.description.length < 10) {
         newErrors[`award-${index}-description`] = 'Description must be at least 10 characters long.';
@@ -58,13 +57,24 @@ export const AwardsSection = ({ onUpdate, initialData }: AwardsSectionProps) => 
     return newErrors;
   }, []);
 
+  // Effect to convert string dates to Date objects if initialData contains string dates
+  useEffect(() => {
+    if (initialData?.awards) {
+      const convertedAwards = initialData.awards.map((award: any) => ({
+        ...award,
+        date: typeof award.date === 'string' && award.date ? new Date(award.date) : award.date
+      }));
+      setAwards(convertedAwards);
+    }
+  }, [initialData]);
+
   // Effect to re-validate whenever awards change
   useEffect(() => {
     const newErrors = validateAwardsPure(awards);
     setErrors(newErrors);
   }, [awards, validateAwardsPure]);
 
-  const handleAwardChange = (index: number, field: 'name' | 'date' | 'description', value: string) => {
+  const handleAwardChange = (index: number, field: 'name' | 'date' | 'description', value: string | Date | null) => {
     const newAwards = [...awards];
     newAwards[index] = { ...newAwards[index], [field]: value };
     setAwards(newAwards);
@@ -73,7 +83,7 @@ export const AwardsSection = ({ onUpdate, initialData }: AwardsSectionProps) => 
   };
 
   const handleAddAward = () => {
-    const newAwards = [...awards, { name: '', date: '', description: '' }];
+    const newAwards = [...awards, { name: '', date: null, description: '' }];
     setAwards(newAwards);
     onUpdate({ awards: newAwards });
   };
@@ -154,15 +164,17 @@ export const AwardsSection = ({ onUpdate, initialData }: AwardsSectionProps) => 
 
             <div>
               <label htmlFor={`award-${index}-date`} className="block text-sm font-medium text-foreground">
-                Date (YYYY or YYYY-MM)
+                Date
               </label>
-              <input
-                type="text"
-                id={`award-${index}-date`}
-                value={award.date}
-                onChange={(e) => handleAwardChange(index, 'date', e.target.value)}
+              <DatePicker
+                selected={award.date}
+                onChange={(date: Date | null) => handleAwardChange(index, 'date', date)}
                 onBlur={() => setTouched(prev => ({ ...prev, [`award-${index}-date`]: true }))}
-                placeholder="2023 or 2023-06"
+                dateFormat="yyyy-MM-dd"
+                showYearDropdown
+                showMonthDropdown
+                dropdownMode="select"
+                placeholderText="Select date"
                 className={`mt-1 block w-full rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500
                   ${touched[`award-${index}-date`] && errors[`award-${index}-date`] ? 'border-red-500 bg-red-50/10 text-red-700' : 'border-border bg-background text-foreground'}
                 `}
@@ -176,7 +188,7 @@ export const AwardsSection = ({ onUpdate, initialData }: AwardsSectionProps) => 
               <label htmlFor={`award-${index}-description`} className="block text-sm font-medium text-foreground">
                 Description
                 <span className="text-sm text-foreground/60 ml-2">
-                  ({award.description.length}/500 characters)
+                  ({(award.description || '').length}/500 characters)
                 </span>
               </label>
               <textarea

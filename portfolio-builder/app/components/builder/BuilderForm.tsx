@@ -115,6 +115,7 @@ export default function BuilderForm() {
         testimonials: sectionData.testimonials,
       }));
     } else if (sectionData.contact) {
+      console.log('Updating contact data:', sectionData.contact);
       setPortfolioData(prev => ({
         ...prev,
         contact: sectionData.contact,
