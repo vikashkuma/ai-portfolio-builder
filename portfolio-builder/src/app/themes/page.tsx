@@ -1,8 +1,8 @@
 'use client';
 
-import { usePortfolioStore } from '../store/portfolioStore';
-import { ThemeSelector } from '../components/builder/ThemeSelector';
-import { PortfolioPreview } from '../components/builder/PortfolioPreview';
+import { usePortfolioStore } from '@/app/store/portfolioStore';
+import { ThemeSelector } from '@/app/components/builder/ThemeSelector';
+import { PortfolioPreview } from '@/app/components/builder/PortfolioPreview';
 
 export default function ThemesPage() {
   const { portfolio, updatePortfolio } = usePortfolioStore();

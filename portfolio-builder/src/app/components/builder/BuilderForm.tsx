@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import Button from '../ui/Button';
+import Button from '@/app/components/ui/Button';
 import { StepTracker } from './StepTracker';
 import { AboutSection } from './sections/AboutSection';
 import { ExperienceSection } from './sections/ExperienceSection';
@@ -13,8 +13,8 @@ import { AwardsSection } from './sections/AwardsSection';
 import { TestimonialsSection } from './sections/TestimonialsSection';
 import { ContactSection } from './sections/ContactSection';
 
-import { downloadPortfolio } from '../../utils/portfolioExport';
-import { Portfolio, Education as PortfolioEducation } from '../../types/portfolio';
+import { downloadPortfolio } from '@/app/utils/portfolioExport';
+import { Portfolio, Education as PortfolioEducation } from '@/app/types/portfolio';
 import { toast } from 'react-hot-toast';
 
 const steps = [
@@ -155,7 +155,7 @@ export default function BuilderForm() {
           institution: edu.institution,
           degree: edu.degree,
           field: edu.field,
-          description: edu.description,
+          description: edu.description || '',
           school: edu.institution,
           period: `${edu.startDate} - ${edu.endDate}`,
           startDate: new Date(edu.startDate),

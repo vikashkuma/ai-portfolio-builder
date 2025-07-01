@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { usePortfolioStore } from '../../store/portfolioStore';
+import { usePortfolioStore } from '@/app/store/portfolioStore';
 
 const Preview = () => {
   const { portfolio } = usePortfolioStore();

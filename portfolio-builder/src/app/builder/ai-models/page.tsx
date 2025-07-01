@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getAvailableModels, switchModel } from '../../utils/ai';
+import { getAvailableModels, switchModel } from '@/app/utils/ai';
 import toast from 'react-hot-toast';
 import { FaRobot, FaCog, FaCheck, FaExclamationTriangle, FaArrowLeft } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
-import Button from '../../components/ui/Button';
+import Button from '@/app/components/ui/Button';
 
 interface ModelInfo {
   name: string;

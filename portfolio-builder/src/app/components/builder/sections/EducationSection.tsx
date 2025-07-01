@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import Button from '../../ui/Button';
-import { generateContent } from '../../../utils/ai';
+import Button from '@/app/components/ui/Button';
+import { generateContent } from '@/app/utils/ai';
 import { Listbox } from '@headlessui/react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import toast from 'react-hot-toast';
 import { FaRobot, FaPlus, FaTrash } from 'react-icons/fa';
-import { Education as PortfolioEducation } from '../../../types/portfolio';
+import { Education as PortfolioEducation } from '@/app/types/portfolio';
 
 const DEGREE_OPTIONS = [
   'Metric',
@@ -31,10 +31,14 @@ const FIELD_OPTIONS = [
   'Computer Science', 'Business', 'Engineering', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Economics', 'Psychology', 'Other'
 ];
 
-interface Education extends PortfolioEducation {
+interface Education {
   id: string;
   school: string;
+  institution: string;
+  degree: string;
+  field: string;
   period: string;
+  description: string;
   startDate?: Date | null;
   endDate?: Date | null;
   otherDegreeText?: string;
@@ -217,6 +221,7 @@ export const EducationSection = ({ onUpdate, initialData }: EducationSectionProp
       setEducations([{
         id: newId,
         school: '',
+        institution: '',
         degree: '',
         field: '',
         period: '',
@@ -237,6 +242,7 @@ export const EducationSection = ({ onUpdate, initialData }: EducationSectionProp
     const newEducation: Education = {
       id: newId,
       school: '',
+      institution: '',
       degree: '',
       field: '',
       period: '',
@@ -724,7 +730,7 @@ export const EducationSection = ({ onUpdate, initialData }: EducationSectionProp
               <label htmlFor={`description-${id}`} className="block text-sm font-medium text-foreground">
                 Description
                 <span className="text-sm text-foreground/60 ml-2">
-                  ({education.description.length}/1000 characters)
+                  ({(education.description || '').length}/1000 characters)
                 </span>
                 <Button size="xs" variant="outline" className="ml-2 flex items-center gap-1" onClick={() => handleGenerateAI(education.id)} disabled={isGenerating || !education.school.trim() || !(education.degree === 'Other' ? education.otherDegreeText?.trim() : education.degree.trim()) || !(education.field === 'Other' ? education.otherFieldText?.trim() : education.field.trim())}>
                   {isGenerating ? (

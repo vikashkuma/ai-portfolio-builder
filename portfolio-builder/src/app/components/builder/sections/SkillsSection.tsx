@@ -2,8 +2,8 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import Button from '../../ui/Button';
-import { generateContent } from '../../../utils/ai';
+import Button from '@/app/components/ui/Button';
+import { generateContent } from '@/app/utils/ai';
 import toast from 'react-hot-toast';
 import { FaPlus, FaTrash, FaRobot, FaCheck } from 'react-icons/fa';
 

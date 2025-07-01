@@ -2,18 +2,18 @@
 
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { usePortfolioStore } from '../../store/portfolioStore';
-import { StepTracker } from '../../components/builder/StepTracker';
-import { AboutSection } from '../../components/builder/sections/AboutSection';
-import { ExperienceSection } from '../../components/builder/sections/ExperienceSection';
-import { EducationSection } from '../../components/builder/sections/EducationSection';
-import { SkillsSection } from '../../components/builder/sections/SkillsSection';
-import { AwardsSection } from '../../components/builder/sections/AwardsSection';
-import { TestimonialsSection } from '../../components/builder/sections/TestimonialsSection';
-import { ContactSection } from '../../components/builder/sections/ContactSection';
+import { usePortfolioStore } from '@/app/store/portfolioStore';
+import { StepTracker } from '@/app/components/builder/StepTracker';
+import { AboutSection } from '@/app/components/builder/sections/AboutSection';
+import { ExperienceSection } from '@/app/components/builder/sections/ExperienceSection';
+import { EducationSection } from '@/app/components/builder/sections/EducationSection';
+import { SkillsSection } from '@/app/components/builder/sections/SkillsSection';
+import { AwardsSection } from '@/app/components/builder/sections/AwardsSection';
+import { TestimonialsSection } from '@/app/components/builder/sections/TestimonialsSection';
+import { ContactSection } from '@/app/components/builder/sections/ContactSection';
 
-import { PortfolioPreview } from '../../components/builder/PortfolioPreview';
-import Button from '../../components/ui/Button';
+import { PortfolioPreview } from '@/app/components/builder/PortfolioPreview';
+import Button from '@/app/components/ui/Button';
 
 const steps = [
   { id: 1, key: 'about', title: 'About', description: 'Basic information' },

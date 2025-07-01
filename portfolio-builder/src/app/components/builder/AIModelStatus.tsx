@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getAvailableModels, switchModel } from '../../utils/ai';
+import { getAvailableModels, switchModel } from '@/app/utils/ai';
 import toast from 'react-hot-toast';
 import { FaRobot, FaCog, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
 
