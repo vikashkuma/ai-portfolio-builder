@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import BuilderForm from "./components/builder/BuilderForm";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const [showBuilder, setShowBuilder] = useState(false);
+  const router = useRouter();
 
-  if (showBuilder) {
-    return <BuilderForm />;
-  }
+  const handleStartBuilder = () => {
+    router.push('/builder/about');
+  };
 
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[80vh] bg-background text-foreground">
@@ -18,7 +18,7 @@ export default function Home() {
       </p>
       <button
         className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold text-lg shadow hover:bg-blue-700 transition mb-12"
-        onClick={() => setShowBuilder(true)}
+        onClick={handleStartBuilder}
       >
         Create My Portfolio
       </button>

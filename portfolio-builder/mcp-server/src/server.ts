@@ -135,7 +135,7 @@ export class PortfolioBuilderMCPServer {
         ]
       };
     } catch (error) {
-      throw new Error(`Failed to generate content: ${error.message}`);
+      throw new Error(`Failed to generate content: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -159,7 +159,7 @@ export class PortfolioBuilderMCPServer {
           name: config.name,
           provider: config.provider,
           available: false,
-          error: error.message
+          error: error instanceof Error ? error.message : 'Unknown error'
         });
       }
     }
@@ -203,7 +203,7 @@ export class PortfolioBuilderMCPServer {
         ]
       };
     } catch (error) {
-      throw new Error(`Failed to switch model: ${error.message}`);
+      throw new Error(`Failed to switch model: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

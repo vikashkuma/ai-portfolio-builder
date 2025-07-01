@@ -38,8 +38,8 @@ const themes: Theme[] = [
 ];
 
 interface ThemeSelectorProps {
-  onSelect: (theme: string) => void;
-  selectedTheme?: string;
+  onSelect: (theme: 'light' | 'dark' | 'modern' | 'minimal') => void;
+  selectedTheme?: 'light' | 'dark' | 'modern' | 'minimal';
 }
 
 export const ThemeSelector = ({ onSelect, selectedTheme = 'light' }: ThemeSelectorProps) => {
@@ -58,7 +58,7 @@ export const ThemeSelector = ({ onSelect, selectedTheme = 'light' }: ThemeSelect
               ? 'border-blue-500 ring-2 ring-blue-200'
               : 'border-gray-200'
           } bg-background text-foreground`}
-          onClick={() => onSelect(theme.id)}
+          onClick={() => onSelect(theme.id as 'light' | 'dark' | 'modern' | 'minimal')}
           onMouseEnter={() => setHoveredTheme(theme.id)}
           onMouseLeave={() => setHoveredTheme(null)}
         >

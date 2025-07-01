@@ -50,9 +50,10 @@ app.post('/generate', async (req: Request, res: Response): Promise<void> => {
     const { section, input, context } = req.body;
 
     if (!section || !input) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Missing required fields: section and input'
       });
+      return;
     }
 
     if (!currentModel) {
@@ -135,9 +136,10 @@ app.post('/switch-model', async (req: Request, res: Response): Promise<void> => 
     const { provider, config } = req.body;
 
     if (!provider) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Missing required field: provider'
       });
+      return;
     }
 
     const modelConfig = {
@@ -149,9 +151,10 @@ app.post('/switch-model', async (req: Request, res: Response): Promise<void> => 
     const newModel = await ModelFactory.createModel(modelConfig);
     
     if (!(await newModel.isAvailable())) {
-      return res.status(400).json({
+      res.status(400).json({
         error: `Model ${provider} is not available`
       });
+      return;
     }
 
     currentModel = newModel;

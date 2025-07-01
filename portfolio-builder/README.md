@@ -11,59 +11,7 @@ A beautiful portfolio builder that uses local AI to generate professional conten
 - **💾 Export Options**: Download as HTML or JSON
 - **🔒 Privacy First**: All AI processing happens locally on your machine
 
-## 🚀 Quick Start (5 Minutes)
-
-### Step 1: Download and Setup
-
-```bash
-# 1. Open Terminal/Command Prompt
-# 2. Navigate to where you want to install the project
-cd ~/Documents
-
-# 3. Clone the project
-git clone <your-repo-url>
-cd portfolio-builder/portfolio-builder
-
-# 4. Install dependencies
-npm install
-```
-
-### Step 2: Setup AI Server (One-time setup)
-
-```bash
-# 1. Navigate to the AI server folder
-cd mcp-server
-
-# 2. Run the automated setup (this will take a few minutes)
-./setup.sh
-
-# 3. Start the AI server
-npm run start:http
-```
-
-**Keep this terminal window open!** The AI server needs to keep running.
-
-### Step 3: Start Portfolio Builder
-
-```bash
-# 1. Open a NEW terminal window
-# 2. Navigate back to the main project
-cd ~/Documents/portfolio-builder/portfolio-builder
-
-# 3. Start the portfolio builder
-npm run dev
-```
-
-### Step 4: Use Your Portfolio Builder
-
-1. **Open your browser** and go to: `http://localhost:3001`
-2. **Click "Create My Portfolio"**
-3. **Fill in each section** with your information
-4. **Use AI to generate content** by clicking "Generate with AI" buttons
-5. **Preview your portfolio** in real-time
-6. **Download your portfolio** when finished
-
-## 🛠️ Detailed Installation Guide
+## 🚀 Quick Start (2 Minutes!)
 
 ### Prerequisites
 
@@ -71,96 +19,133 @@ npm run dev
 - **Git**: [Download here](https://git-scm.com/)
 - **At least 4GB RAM** (for AI models)
 
-### Step-by-Step Installation
+### One-Command Setup & Run
 
-#### 1. Install Node.js
-1. Go to [nodejs.org](https://nodejs.org/)
-2. Download the "LTS" version
-3. Run the installer and follow the instructions
-4. Verify installation: Open terminal and type `node --version`
-
-#### 2. Install Git
-1. Go to [git-scm.com](https://git-scm.com/)
-2. Download for your operating system
-3. Run the installer with default settings
-4. Verify installation: Open terminal and type `git --version`
-
-#### 3. Download the Project
+#### On Mac/Linux:
 ```bash
-# Open Terminal (Mac/Linux) or Command Prompt (Windows)
-# Navigate to your Documents folder
-cd ~/Documents
-
-# Download the project
+# 1. Download the project
 git clone <your-repo-url>
 cd portfolio-builder/portfolio-builder
+
+# 2. Run everything with one command!
+./start.sh
 ```
 
-#### 4. Install Dependencies
+#### On Windows:
+```cmd
+# 1. Download the project
+git clone <your-repo-url>
+cd portfolio-builder\portfolio-builder
+
+# 2. Run everything with one command!
+start.bat
+```
+
+That's it! The script will:
+- ✅ Install all dependencies automatically
+- ✅ Configure ports and environment
+- ✅ Start the AI server
+- ✅ Start the portfolio builder
+- ✅ Open your browser to `http://localhost:3000`
+
+### Stop the Application
+
+#### On Mac/Linux:
 ```bash
-# Install all required packages
-npm install
+# To stop all servers and free ports
+./stop.sh
 ```
 
-#### 5. Setup AI Server
-```bash
-# Navigate to AI server folder
-cd mcp-server
-
-# Run automated setup
-./setup.sh
-
-# This will:
-# - Install AI dependencies
-# - Download AI models (this may take 10-15 minutes)
-# - Create configuration files
-# - Test the setup
+#### On Windows:
+```cmd
+# To stop all servers and free ports
+stop.bat
 ```
 
-#### 6. Configure Environment
-```bash
-# Go back to main project folder
-cd ..
+## 🎨 Using Your Portfolio Builder
 
-# Create environment file
-echo "NEXT_PUBLIC_MCP_SERVER_URL=http://localhost:3002" > .env.local
-```
+1. **Open your browser** and go to: `http://localhost:3000`
+2. **Click "Create My Portfolio"**
+3. **Fill in each section** with your information
+4. **Use AI to generate content** by clicking "Generate with AI" buttons
+5. **Preview your portfolio** in real-time
+6. **Download your portfolio** when finished
 
-## 🚀 Running the Application
+## 🛠️ Manual Setup (Advanced)
 
-### Option 1: Quick Start (Recommended)
+If you prefer to run servers manually:
 
-**Terminal 1 - AI Server:**
+### Start AI Server
 ```bash
 cd mcp-server
 npm run start:http
 ```
-You should see: `MCP HTTP Server running on port 3002`
 
-**Terminal 2 - Portfolio Builder:**
+### Start Portfolio Builder (in new terminal)
 ```bash
 npm run dev
 ```
-You should see: `Local: http://localhost:3001`
 
-### Option 2: Development Mode
+## 🔧 Troubleshooting
 
-**Terminal 1 - AI Server (with auto-restart):**
+### "Permission denied: ./start.sh"
 ```bash
-cd mcp-server
-npm run dev
+chmod +x start.sh
+./start.sh
 ```
 
-**Terminal 2 - Portfolio Builder (with auto-restart):**
+### "Port already in use"
+The start script automatically handles this, but if you need to manually free ports:
 ```bash
-npm run dev
+./stop.sh
 ```
+
+### "AI server not available"
+1. Make sure you ran `./start.sh` (not manual commands)
+2. Check that both servers are running
+3. Restart with `./stop.sh && ./start.sh`
+
+## ✅ Success Checklist
+
+When everything is working, you should have:
+
+- ✅ **Portfolio Builder**: Running at `http://localhost:3000`
+- ✅ **AI Server**: Running at `http://localhost:3001`
+- ✅ **AI Features**: "Generate with AI" buttons working
+- ✅ **Clean Shutdown**: `./stop.sh` frees all ports
+
+## 🆘 Need Help?
+
+### Common Questions
+
+**Q: Do I need to be a programmer?**
+A: No! Just run `./start.sh` and you're ready to go.
+
+**Q: What if something doesn't work?**
+A: Run `./stop.sh` then `./start.sh` again.
+
+**Q: Can I use this offline?**
+A: Yes! Once set up, everything works without internet.
+
+**Q: Is this safe?**
+A: Yes! All AI processing happens on your computer.
+
+**Q: How do I stop the application?**
+A: Press `Ctrl+C` in the terminal or run `./stop.sh`
+
+## 🎯 Next Steps
+
+1. **Create your portfolio** using the step-by-step wizard
+2. **Customize themes** to match your style
+3. **Generate AI content** for each section
+4. **Export your portfolio** as HTML or JSON
+5. **Share your work** with the world!
 
 ## 🎨 Using the Portfolio Builder
 
 ### 1. Create Your Portfolio
 
-1. **Open**: `http://localhost:3001`
+1. **Open**: `http://localhost:3000`
 2. **Click**: "Create My Portfolio"
 3. **Follow the steps**:
    - **About**: Your name, role, and bio
@@ -233,56 +218,6 @@ npm run dev
 - **Quality**: High quality
 - **Use Case**: Production use
 
-## 🔧 Troubleshooting
-
-### Common Issues
-
-#### "Port already in use"
-```bash
-# Check what's using the port
-lsof -i :3001
-lsof -i :3002
-
-# Kill the process if needed
-kill -9 <PID>
-```
-
-#### "MCP server not available"
-1. Make sure AI server is running in Terminal 1
-2. Check the URL in `.env.local`: `NEXT_PUBLIC_MCP_SERVER_URL=http://localhost:3002`
-3. Restart the portfolio builder: `npm run dev`
-
-#### "Ollama not available"
-1. Install Ollama: [ollama.ai](https://ollama.ai)
-2. Start Ollama: `ollama serve`
-3. Download model: `ollama pull llama2`
-
-#### "AI generation not working"
-1. Check the AI Model Status panel
-2. Try switching to a different model
-3. Check browser console for errors
-4. Restart both servers
-
-### Getting Help
-
-#### Debug Mode
-```bash
-# AI Server with detailed logs
-cd mcp-server
-DEBUG=* npm run dev
-
-# Portfolio Builder with detailed logs
-DEBUG=* npm run dev
-```
-
-#### Check Server Status
-```bash
-# Test AI server
-curl http://localhost:3002/health
-
-# Should return: {"status":"ok","model":{...}}
-```
-
 ## 📁 Project Structure
 
 ```
@@ -313,32 +248,6 @@ portfolio-builder/
 3. **Customize everything**: Edit AI suggestions to match your voice
 4. **Add real examples**: Include actual projects and achievements
 5. **Keep it updated**: Regularly update your portfolio
-
-## 🆘 Need Help?
-
-### Common Questions
-
-**Q: Do I need to pay for anything?**
-A: No! The entire system runs locally and is completely free.
-
-**Q: What if I don't have technical skills?**
-A: The setup script automates everything. Just follow the steps!
-
-**Q: Can I use this offline?**
-A: Yes! Once set up, everything works without internet.
-
-**Q: Is my data private?**
-A: Yes! All AI processing happens on your computer.
-
-**Q: What if something doesn't work?**
-A: Check the troubleshooting section above, or restart both servers.
-
-### Getting Support
-
-1. **Check this README** first
-2. **Look at the troubleshooting section**
-3. **Check the console** for error messages
-4. **Restart both servers** if needed
 
 ## 🎉 Success!
 

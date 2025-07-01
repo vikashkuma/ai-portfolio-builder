@@ -1,3 +1,5 @@
+'use client';
+
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { usePortfolioStore } from '../../store/portfolioStore';
@@ -43,15 +45,11 @@ export default function BuilderSectionPage() {
   const { portfolio, updatePortfolio } = usePortfolioStore();
   const theme = portfolio?.theme || 'light';
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-  const [showDeviceModal, setShowDeviceModal] = useState(section === 'preview');
+  const [showDeviceModal, setShowDeviceModal] = useState(false);
 
   useEffect(() => {
     if (!section || (!(section in sectionComponents) && section !== 'theme' && section !== 'preview')) {
       router.replace('/builder/about');
-    }
-    // Always open the modal when entering preview step
-    if (section === 'preview') {
-      setShowDeviceModal(true);
     }
   }, [section, router]);
 
@@ -82,19 +80,23 @@ export default function BuilderSectionPage() {
         {/* Step Tracker always at the top */}
         <StepTracker steps={steps} currentStep={stepIndex + 1} />
         {/* Preview always below steps except in preview step */}
-        {section !== 'preview' && (
-          <div className="my-8">
-            <PortfolioPreview portfolioData={portfolio || {}} theme={theme} />
-          </div>
-        )}
         {/* Section Form, Theme Selector, or Preview Tab */}
         <div className="bg-white rounded-lg shadow p-6">
           {section === 'theme' ? (
             <div>
               <h2 className="text-2xl font-bold mb-4">Choose Your Theme</h2>
               <ThemeSelector
-                onSelect={(theme: string) => updatePortfolio({ theme })}
-                selectedTheme={theme}
+                  onSelect={(theme) => {
+                    updatePortfolio({ theme });
+                    // Set Tailwind's dark mode class for dark theme, otherwise remove it
+                    if (theme === 'dark') {
+                      document.documentElement.className = 'dark';
+                    } else {
+                      document.documentElement.className = '';
+                    }
+                    localStorage.setItem('portfolio-builder-theme', theme);
+                  }}
+                  selectedTheme={theme}
               />
               <div className="mt-8 flex justify-end">
                 <Button onClick={handleBack} variant="outline" className="mr-2">Back</Button>
@@ -103,8 +105,14 @@ export default function BuilderSectionPage() {
             </div>
           ) : section === 'preview' ? (
             <div>
-              <h2 className="text-2xl font-bold mb-4">Preview Your Portfolio</h2>
-              <Button onClick={() => setShowDeviceModal(true)} variant="outline" className="mb-4">Change Device</Button>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Preview Your Portfolio</h2>
+                <Button onClick={() => setShowDeviceModal(true)} variant="outline">
+                  Change Device View
+                </Button>
+              </div>
+              
+              {/* Device Selection Modal */}
               {showDeviceModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
                   <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto p-6 relative">
@@ -133,15 +141,17 @@ export default function BuilderSectionPage() {
                   </div>
                 </div>
               )}
-              {!showDeviceModal && (
-                <>
-                  <PortfolioPreview portfolioData={portfolio || {}} theme={theme} device={device} />
-                  <div className="mt-8 flex justify-between">
-                    <Button onClick={handleBack} variant="outline">Back</Button>
-                    <Button onClick={handleNext}>Finish</Button>
-                  </div>
-                </>
-              )}
+              
+              {/* Portfolio Preview */}
+              <div className="mb-6">
+                <PortfolioPreview portfolioData={portfolio || {}} theme={theme} device={device} />
+              </div>
+              
+              {/* Navigation Buttons */}
+              <div className="flex justify-between">
+                <Button onClick={handleBack} variant="outline">Back</Button>
+                <Button onClick={handleNext}>Finish</Button>
+              </div>
             </div>
           ) : SectionComponent ? (
             <>

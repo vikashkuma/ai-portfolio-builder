@@ -12,7 +12,7 @@ import { EducationSection } from './sections/EducationSection';
 import { AwardsSection } from './sections/AwardsSection';
 import { TestimonialsSection } from './sections/TestimonialsSection';
 import { ContactSection } from './sections/ContactSection';
-import { AIModelStatus } from './AIModelStatus';
+
 import { downloadPortfolio } from '../../utils/portfolioExport';
 import { Portfolio, Education as PortfolioEducation } from '../../types/portfolio';
 import { toast } from 'react-hot-toast';
@@ -208,7 +208,6 @@ export default function BuilderForm() {
             </div>
           </div>
           <div className="w-full min-h-[600px] flex flex-col justify-start space-y-6">
-            <AIModelStatus />
             <div className="w-full">
               <PortfolioPreview portfolioData={portfolioData} theme="light" />
             </div>

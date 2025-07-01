@@ -50,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav className="ml-auto flex gap-6">
               <a href="/features" className="hover:underline">Features</a>
               <a href="/themes" className="hover:underline">Themes</a>
+              <a href="/builder/ai-models" className="hover:underline">AI Models</a>
               <a href="/contact" className="hover:underline">Contact</a>
             </nav>
           </header>

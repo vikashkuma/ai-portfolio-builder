@@ -13,7 +13,16 @@ export default function ThemesPage() {
       <h1 className="text-3xl font-bold mb-4">Choose a Portfolio Theme</h1>
       <p className="text-lg mb-8">Browse and preview available portfolio themes. Select one to see a live preview below.</p>
       <ThemeSelector
-        onSelect={(theme: string) => updatePortfolio({ theme })}
+        onSelect={(theme) => {
+          updatePortfolio({ theme });
+          // Set Tailwind's dark mode class for dark theme, otherwise remove it
+          if (theme === 'dark') {
+            document.documentElement.className = 'dark';
+          } else {
+            document.documentElement.className = '';
+          }
+          localStorage.setItem('portfolio-builder-theme', theme);
+        }}
         selectedTheme={theme}
       />
       <div className="mt-12">
